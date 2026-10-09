@@ -8,7 +8,7 @@ import { plural, shortDate } from "@/lib/format";
 import Counter from "./Counter";
 import RangeCalendar from "./RangeCalendar";
 
-export const DESTINATIONS = [
+const DESTINATIONS = [
   { name: "Goa", sub: "For its beaches and nightlife" },
   { name: "Manali", sub: "For snow peaks and pine forests" },
   { name: "Jaipur", sub: "For forts and heritage havelis" },

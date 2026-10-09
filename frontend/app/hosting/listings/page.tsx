@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import LoginPrompt from "@/components/LoginPrompt";
 import { img } from "@/lib/api";
-import { clearDraft, useDraft } from "@/lib/draft";
+import { clearDraft, useDraft } from "@/lib/storage";
 import type { ListingCard } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
 import { useUser } from "@/lib/user";

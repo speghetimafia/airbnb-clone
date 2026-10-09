@@ -4,7 +4,7 @@ import { ArrowRight, Star } from "lucide-react";
 import Link from "next/link";
 import { img } from "@/lib/api";
 import { money } from "@/lib/format";
-import { useRecent } from "@/lib/recent";
+import { useRecent } from "@/lib/storage";
 import type { ListingCard, Page } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
 import { HeartButton } from "./ListingCard";

@@ -12,7 +12,7 @@ import {
 import LoginPrompt from "@/components/LoginPrompt";
 import { Belo } from "@/components/Logo";
 import { img, post } from "@/lib/api";
-import { clearDraft, loadDraft, saveDraft } from "@/lib/draft";
+import { clearDraft, loadDraft, saveDraft } from "@/lib/storage";
 import { money } from "@/lib/format";
 import type { ListingDetail, ListingInput } from "@/lib/types";
 import { useUser } from "@/lib/user";

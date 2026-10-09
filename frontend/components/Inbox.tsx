@@ -14,7 +14,7 @@ import LoginPrompt from "./LoginPrompt";
 type Role = "guest" | "host";
 const base = (role: Role) => (role === "guest" ? "/messages" : "/hosting/messages");
 
-export function linkify(text: string) {
+function linkify(text: string) {
   return text.split(/(https?:\/\/\S+)/g).map((part, i) =>
     /^https?:\/\//.test(part) ? (
       <a key={i} href={part} target="_blank" rel="noreferrer" className="font-semibold underline">Open in Maps</a>

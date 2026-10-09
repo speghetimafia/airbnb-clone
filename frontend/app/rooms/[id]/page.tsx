@@ -14,7 +14,7 @@ import RangeCalendar from "@/components/RangeCalendar";
 import { img, qs } from "@/lib/api";
 import { dateRange, money, nightsBetween, plural, time12, yearsSince } from "@/lib/format";
 import type { ListingDetail, Range, Review } from "@/lib/types";
-import { addRecent } from "@/lib/recent";
+import { addRecent } from "@/lib/storage";
 import { useApi } from "@/lib/useApi";
 import { useSnapIndex } from "@/lib/useSnapIndex";
 import { useUser } from "@/lib/user";
