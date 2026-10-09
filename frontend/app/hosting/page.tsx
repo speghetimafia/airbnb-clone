@@ -54,6 +54,7 @@ export default function Today() {
   const [tab, setTab] = useState<"today" | "upcoming">("today");
   const [showAll, setShowAll] = useState(false);
   const [toCancel, setToCancel] = useState<Booking | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   if (!ready) return null;
   if (!user) return <LoginPrompt title="Hosting" text="Log in as a host to see today's reservations." />;
@@ -74,7 +75,7 @@ export default function Today() {
       setToCancel(null);
       bookings.reload();
     } catch (e) {
-      toast.error((e as Error).message);
+      setCancelError((e as Error).message);
     }
   };
 
@@ -134,8 +135,12 @@ export default function Today() {
 
       <Modal
         open={!!toCancel}
-        onClose={() => setToCancel(null)}
+        onClose={() => {
+          setToCancel(null);
+          setCancelError(null);
+        }}
         title="Cancel reservation"
+        error={cancelError}
         footer={
           <div className="flex justify-between">
             <button onClick={() => setToCancel(null)} className="font-semibold underline">Keep it</button>

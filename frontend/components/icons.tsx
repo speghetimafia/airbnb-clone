@@ -1,23 +1,24 @@
 import {
-  AirVent, Bath, Building2, Car, Castle, Coffee, CookingPot, Dumbbell, Flame, KeyRound, Laptop, Mountain,
-  MountainSnow, PawPrint, Sailboat, Sparkles, Tent, Thermometer, Tractor, TreeDeciduous, TreePalm, TreePine,
-  Tv, Umbrella, Utensils, WashingMachine, Waves, Wheat, Wifi, Zap, type LucideIcon,
+  AirVent, Bath, Building2, Car, Castle, Coffee, CookingPot, DoorOpen, Dumbbell, Flame, Hotel, House, KeyRound, Laptop,
+  Mountain, MountainSnow, PawPrint, Sailboat, Snowflake, Sparkles, Tent, Thermometer, Tractor, TreeDeciduous, TreePalm,
+  TreePine, Trees, Tv, Umbrella, Utensils, Warehouse, WashingMachine, Waves, Wheat, Wifi, Zap, type LucideIcon,
 } from "lucide-react";
 
-export const CATEGORIES: { name: string; icon: LucideIcon }[] = [
-  { name: "Trending", icon: Flame },
-  { name: "Beachfront", icon: Umbrella },
-  { name: "Amazing pools", icon: Waves },
-  { name: "Cabins", icon: TreePine },
-  { name: "Amazing views", icon: Mountain },
-  { name: "Historical homes", icon: Castle },
-  { name: "Lakefront", icon: Sailboat },
-  { name: "Tropical", icon: TreePalm },
-  { name: "Farms", icon: Tractor },
-  { name: "Countryside", icon: Wheat },
-  { name: "Treehouses", icon: TreeDeciduous },
-  { name: "Camping", icon: Tent },
-  { name: "Iconic cities", icon: Building2 },
+/** The icon row on Explore. `title`/`blurb` are the highlight shown on a listing in that category. */
+export const CATEGORIES: { name: string; icon: LucideIcon; title: string; blurb: string }[] = [
+  { name: "Trending", icon: Flame, title: "Trending stay", blurb: "Guests have been booking this place a lot lately." },
+  { name: "Beachfront", icon: Umbrella, title: "Beachfront", blurb: "Walk straight from the house onto the sand." },
+  { name: "Amazing pools", icon: Waves, title: "Dive right in", blurb: "This is one of the few places in the area with a pool." },
+  { name: "Cabins", icon: TreePine, title: "Cosy cabin", blurb: "A warm, wood-panelled retreat surrounded by nature." },
+  { name: "Amazing views", icon: Mountain, title: "Amazing views", blurb: "Guests say the views from this home are unforgettable." },
+  { name: "Historical homes", icon: Castle, title: "Historical home", blurb: "A home with heritage, character and stories to tell." },
+  { name: "Lakefront", icon: Sailboat, title: "Lakefront", blurb: "Wake up by the water, just steps from the lake." },
+  { name: "Tropical", icon: TreePalm, title: "Tropical escape", blurb: "Palm trees, warm weather and slow, easy days." },
+  { name: "Farms", icon: Tractor, title: "Farm stay", blurb: "Fresh air, local produce and life on a working farm." },
+  { name: "Countryside", icon: Wheat, title: "Countryside", blurb: "Quiet surroundings, open skies and space to unwind." },
+  { name: "Treehouses", icon: TreeDeciduous, title: "Treehouse", blurb: "Sleep up in the trees for a one-of-a-kind stay." },
+  { name: "Camping", icon: Tent, title: "Under the stars", blurb: "A camp-style stay for an outdoorsy trip." },
+  { name: "Iconic cities", icon: Building2, title: "Iconic city", blurb: "Close to the city's best food, sights and nightlife." },
 ];
 
 const AMENITY_ICONS: Record<string, LucideIcon> = {
@@ -31,7 +32,8 @@ export function AmenityIcon({ icon, size = 24 }: { icon: string; size?: number }
   return <Icon size={size} strokeWidth={1.5} />;
 }
 
-export const PROPERTY_TYPES = [
-  "House", "Apartment", "Villa", "Cottage", "Cabin", "Guesthouse", "Farm stay", "Heritage haveli", "Treehouse",
-  "Tent", "Hut", "Boat", "Chalet", "Dome",
-];
+export const PROPERTY_ICONS: Record<string, LucideIcon> = {
+  House, Apartment: Building2, Villa: Hotel, Cottage: Trees, Cabin: TreePine, Guesthouse: DoorOpen, "Farm stay": Tractor,
+  "Heritage haveli": Castle, Treehouse: TreeDeciduous, Tent, Hut: Warehouse, Boat: Sailboat, Chalet: MountainSnow, Dome: Snowflake,
+};
+export const PROPERTY_TYPES = Object.keys(PROPERTY_ICONS);

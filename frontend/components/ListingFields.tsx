@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ImagePlus, Trash2 } from "lucide-react";
+import { ImagePlus, Trash2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -11,7 +11,7 @@ import { AmenityIcon, CATEGORIES, PROPERTY_TYPES } from "./icons";
 
 const PinMap = dynamic(() => import("./MapView").then((m) => m.PinMap), { ssr: false });
 
-const BLANK: ListingInput = {
+export const BLANK: ListingInput = {
   title: "", description: "", property_type: "House", category: "Trending", city: "", state: "", address: "",
   lat: 15.4989, lng: 73.8278, max_guests: 2, bedrooms: 1, beds: 1, baths: 1, base_price: 3000, weekend_price: null,
   cleaning_fee: 500, weekly_discount_pct: 0, monthly_discount_pct: 0, min_nights: 1, max_nights: 30,
@@ -24,7 +24,7 @@ export function toInput(l: ListingDetail): ListingInput {
   return { ...picked, photo_urls: l.photos.map((p) => p.url), amenity_ids: l.amenities.map((a) => a.id) };
 }
 
-// ---- Field groups: the create form uses all of them, the listing editor shows one per screen. ----
+// ---- Field groups shared by the step-by-step create flow and the listing editor. ----
 
 export type Fields = { f: ListingInput; set: <K extends keyof ListingInput>(k: K, v: ListingInput[K]) => void };
 
@@ -36,18 +36,6 @@ export const NOTICE_OPTIONS = [0, 1, 2, 3, 7];
 export const noticeLabel = (d: number) => (d === 0 ? "Same day" : `At least ${d} day${d > 1 ? "s" : ""}`);
 export const WINDOW_OPTIONS = [90, 180, 270, 365, 730];
 export const windowLabel = (d: number) => `${Math.round(d / 30.4)} months in advance`;
-
-export function BasicsFields({ f, set }: Fields) {
-  return (
-    <>
-      <label className={labelCls}>Title</label>
-      <input className={inputCls} required minLength={3} maxLength={200} value={f.title} onChange={(e) => set("title", e.target.value)} placeholder="Sea-view cottage with a private garden" />
-      <label className={`${labelCls} mt-6`}>Description</label>
-      <textarea className={inputCls} required minLength={10} rows={6} value={f.description} onChange={(e) => set("description", e.target.value)} placeholder="What makes your place special?" />
-      <TypeFields f={f} set={set} />
-    </>
-  );
-}
 
 export function TypeFields({ f, set }: Fields) {
   return (
@@ -222,25 +210,6 @@ export function AmenitiesField({ f, set }: Fields) {
   );
 }
 
-export function PriceFields({ f, set }: Fields) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div>
-        <label className={labelCls}>Nightly price (₹)</label>
-        <input className={inputCls} type="number" min={1} required value={f.base_price || ""} onChange={(e) => set("base_price", num(e.target.value))} />
-      </div>
-      <div>
-        <label className={labelCls}>Weekend price, Fri & Sat (₹, optional)</label>
-        <input className={inputCls} type="number" min={1} value={f.weekend_price ?? ""} onChange={(e) => set("weekend_price", e.target.value ? Number(e.target.value) : null)} placeholder="Same as nightly" />
-      </div>
-      <div>
-        <label className={labelCls}>Cleaning fee (₹ per stay)</label>
-        <input className={inputCls} type="number" min={0} value={f.cleaning_fee} onChange={(e) => set("cleaning_fee", num(e.target.value))} />
-      </div>
-    </div>
-  );
-}
-
 export function DiscountFields({ f, set }: Fields) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -295,60 +264,5 @@ export function TimesFields({ f, set }: Fields) {
         <input className={inputCls} type="time" required value={f.check_out_time} onChange={(e) => set("check_out_time", e.target.value)} />
       </div>
     </div>
-  );
-}
-
-// ---- Create flow ----
-
-type Props = { submitLabel: string; onSubmit: (data: ListingInput) => Promise<void>; onBack: () => void };
-
-export default function ListingForm({ submitLabel, onSubmit, onBack }: Props) {
-  const [f, setF] = useState<ListingInput>(BLANK);
-  const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const set: Fields["set"] = (k, v) => setF((prev) => ({ ...prev, [k]: v }));
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!f.photo_urls.length) return toast.error("Add at least one photo");
-    setSaving(true);
-    try {
-      await onSubmit({ ...f, weekend_price: f.weekend_price || null });
-    } catch (err) {
-      toast.error((err as Error).message);
-      setSaving(false);
-    }
-  };
-
-  const section = (title: string, sub: string | null, body: React.ReactNode) => (
-    <section className="border-b border-line py-10">
-      <h2 className="mb-1 text-[22px] font-semibold">{title}</h2>
-      {sub && <p className="mb-6 text-muted">{sub}</p>}
-      <div className={sub ? "" : "mt-6"}>{body}</div>
-    </section>
-  );
-
-  return (
-    <form onSubmit={submit} className="mx-auto max-w-3xl px-6 pb-32 pt-8">
-      <button type="button" onClick={onBack} className="mb-6 flex items-center gap-2 text-sm font-semibold hover:underline">
-        <ArrowLeft size={16} /> Back
-      </button>
-      {section("Tell guests about your place", "Short titles work best. Have fun with it, you can always change it later.", <BasicsFields f={f} set={set} />)}
-      {section("Where's your place located?", "Guests see the exact address only after they book. Click the map to drop the pin.", <LocationFields f={f} set={set} />)}
-      {section("Share some basics about your place", null, <RoomsFields f={f} set={set} />)}
-      {section("Add some photos", "Upload images or paste image links. The first photo is your cover.", <PhotosField f={f} set={set} onUploading={setUploading} />)}
-      {section("Tell guests what your place has to offer", null, <AmenitiesField f={f} set={set} />)}
-      {section("Pricing", "Guests see a full breakdown. Airbnb adds a 14% guest service fee.", <><PriceFields f={f} set={set} /><div className="mt-4" /><DiscountFields f={f} set={set} /></>)}
-      {section("Availability", null, <><AvailabilityFields f={f} set={set} /><div className="mt-4" /><TimesFields f={f} set={set} /></>)}
-
-      <div className="fixed inset-x-0 bottom-0 z-[600] border-t border-line bg-white px-6 py-4">
-        <div className="mx-auto flex max-w-3xl justify-between">
-          <button type="button" onClick={onBack} className="font-semibold underline">Cancel</button>
-          <button type="submit" disabled={saving || uploading} className="rounded-lg bg-ink px-8 py-3 font-semibold text-white disabled:opacity-40">
-            {saving ? "Saving…" : submitLabel}
-          </button>
-        </div>
-      </div>
-    </form>
   );
 }
