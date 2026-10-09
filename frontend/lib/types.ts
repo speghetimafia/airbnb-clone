@@ -10,6 +10,8 @@ export type UserDetail = User & {
   bio: string;
   joined_at: string;
   is_host: boolean;
+  trip_count: number;
+  review_count: number;
 };
 
 export type Amenity = { id: number; name: string; icon: string };
@@ -28,6 +30,7 @@ export type ListingCard = {
   rating: number | null;
   review_count: number;
   host_is_superhost: boolean;
+  is_listed: boolean;
   stay_total?: number | null;
 };
 
@@ -58,6 +61,9 @@ export type ListingDetail = {
   max_nights: number;
   check_in_time: string;
   check_out_time: string;
+  advance_notice_days: number;
+  availability_window_days: number;
+  is_listed: boolean;
   created_at: string;
   host: UserDetail;
   photos: { id: number; url: string }[];
@@ -109,12 +115,17 @@ export type Booking = {
     property_type: string;
     check_in_time: string;
     check_out_time: string;
+    address: string;
+    lat: number;
+    lng: number;
     host: User;
     photos: { id: number; url: string }[];
   };
 };
 
 export type Message = { id: number; title: string; body: string; send_at: string };
+
+export type Thread = { booking: Booking; last: Message; count: number };
 
 export type Block = { id: number; start_date: string; end_date: string; note: string };
 

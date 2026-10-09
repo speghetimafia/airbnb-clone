@@ -82,3 +82,5 @@ body {
 .price-pin.active { background: #222222; color: white; transform: translate(-50%, -50%) scale(1.08); }
 .leaflet-div-icon { background: transparent; border: none; }
 .leaflet-container { font-family: inherit; }
+/* Airbnb-style muted basemap */
+.leaflet-tile-pane { filter: grayscale(0.9) brightness(1.06) contrast(0.92); }

@@ -51,10 +51,10 @@ export default function MapView({ listings, activeId }: { listings: ListingCard[
 
 /** Single-pin map for the listing page and the host form (click to move the pin). */
 export function PinMap({
-  lat, lng, zoom = 12, onPick, height = 480,
-}: { lat: number; lng: number; zoom?: number; onPick?: (lat: number, lng: number) => void; height?: number }) {
+  lat, lng, zoom = 12, onPick, height = 480, className = "rounded-xl",
+}: { lat: number; lng: number; zoom?: number; onPick?: (lat: number, lng: number) => void; height?: number | string; className?: string }) {
   return (
-    <MapContainer center={[lat, lng]} zoom={zoom} scrollWheelZoom={false} style={{ height }} className="w-full rounded-xl">
+    <MapContainer center={[lat, lng]} zoom={zoom} scrollWheelZoom={false} style={{ height }} className={`w-full ${className}`}>
       <TileLayer url={TILES} attribution={ATTRIBUTION} />
       <Recenter lat={lat} lng={lng} />
       {onPick && <ClickToPick onPick={onPick} />}

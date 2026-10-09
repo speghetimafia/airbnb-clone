@@ -3,7 +3,7 @@
 import { Award, CalendarDays, ChevronLeft, DoorOpen, Grip, KeyRound, Medal, Share, Star } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import BookingCard from "@/components/BookingCard";
 import { Avatar } from "@/components/Header";
@@ -14,6 +14,7 @@ import RangeCalendar from "@/components/RangeCalendar";
 import { img, qs } from "@/lib/api";
 import { dateRange, money, nightsBetween, plural, time12, yearsSince } from "@/lib/format";
 import type { ListingDetail, Range, Review } from "@/lib/types";
+import { addRecent } from "@/lib/recent";
 import { useApi } from "@/lib/useApi";
 import { useSnapIndex } from "@/lib/useSnapIndex";
 import { useUser } from "@/lib/user";
@@ -173,6 +174,12 @@ function Room() {
   const params = useSearchParams();
   const { user, requireLogin } = useUser();
   const { data: listing, error } = useApi<ListingDetail>(`/listings/${id}`);
+  useEffect(() => {
+    if (!listing) return;
+    const { id, title, city, state, property_type, category, lat, lng, base_price, rating, review_count, is_listed } = listing;
+    addRecent({ id, title, city, state, property_type, category, lat, lng, base_price, rating, review_count, is_listed,
+      photos: listing.photos.slice(0, 5).map((p) => p.url), host_is_superhost: listing.host.is_superhost });
+  }, [listing]);
   const { data: unavailable } = useApi<Range[]>(`/listings/${id}/availability`);
   const [checkIn, setCheckIn] = useState<string | null>(params.get("check_in"));
   const [checkOut, setCheckOut] = useState<string | null>(params.get("check_out"));

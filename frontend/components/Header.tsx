@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Heart, Menu, Search, UserRound } from "lucide-react";
+import { ArrowLeftRight, Bookmark, CalendarDays, Globe, Heart, Menu, MessageSquare, PanelTop, Search, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -52,12 +52,12 @@ function UserMenu() {
         <div className="absolute right-0 top-14 z-50 w-60 overflow-hidden rounded-xl bg-white py-2 shadow-[0_2px_16px_rgba(0,0,0,0.12)]">
           {user ? (
             <>
-              <Link href="/coming-soon?f=Messages" onClick={go} className={`${item} font-semibold`}>Messages</Link>
+              <Link href="/messages" onClick={go} className={`${item} font-semibold`}>Messages</Link>
               <Link href="/trips" onClick={go} className={`${item} font-semibold`}>Trips</Link>
               <Link href="/wishlists" onClick={go} className={`${item} font-semibold`}>Wishlists</Link>
               <hr className="my-2 border-line" />
-              <Link href="/hosting" onClick={go} className={item}>{user.is_host ? "Manage listings" : "Airbnb your home"}</Link>
-              <Link href="/coming-soon?f=Identity verification" onClick={go} className={item}>Account</Link>
+              <Link href="/switch?to=hosting" onClick={go} className={item}>{user.is_host ? "Manage listings" : "Airbnb your home"}</Link>
+              <Link href="/profile" onClick={go} className={item}>Profile</Link>
               <hr className="my-2 border-line" />
               <button onClick={() => { go(); setLoginOpen(true); }} className={item}>Switch user</button>
               <button onClick={() => { go(); logout(); }} className={item}>Log out</button>
@@ -125,7 +125,46 @@ export function LoginModal() {
   );
 }
 
+const HOST_TABS = [
+  { href: "/hosting", label: "Today", icon: Bookmark },
+  { href: "/hosting/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/hosting/listings", label: "Listings", icon: PanelTop },
+  { href: "/hosting/messages", label: "Messages", icon: MessageSquare },
+  { href: "/hosting/menu", label: "Menu", icon: Menu },
+];
+const hostTabActive = (href: string, pathname: string) => (href === "/hosting" ? pathname === href : pathname.startsWith(href));
+
+/** Hosting mode has its own nav, like the app: Today, Calendar, Listings, Messages, Menu. Desktop only; mobile uses MobileNav. */
+function HostHeader() {
+  const pathname = usePathname();
+  return (
+    <header className="sticky top-0 z-[500] hidden border-b border-line bg-white md:block">
+      <div className="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-6 xl:px-20">
+        <div className="flex-1"><Logo /></div>
+        <nav className="flex gap-2">
+          {HOST_TABS.map((t) => (
+            <Link key={t.href} href={t.href} className={`rounded-full px-4 py-2 text-[15px] ${hostTabActive(t.href, pathname) ? "bg-soft font-semibold" : "text-muted hover:bg-soft hover:text-ink"}`}>
+              {t.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="flex flex-1 items-center justify-end gap-2">
+          <Link href="/switch?to=travelling" className="rounded-full px-4 py-3 text-sm font-semibold hover:bg-soft">Switch to travelling</Link>
+          <UserMenu />
+        </div>
+      </div>
+    </header>
+  );
+}
+
 export default function Header() {
+  const pathname = usePathname();
+  if (pathname === "/switch") return null;
+  if (pathname.startsWith("/hosting")) return <HostHeader />;
+  return <GuestHeader />;
+}
+
+function GuestHeader() {
   const pathname = usePathname();
   const params = useSearchParams();
   const { user } = useUser();
@@ -158,7 +197,7 @@ export default function Header() {
 
   return (
     <>
-      <header className={`sticky top-0 z-[500] border-b border-line bg-white ${expanded ? "md:pb-5" : ""} ${narrow ? "hidden md:block" : ""}`}>
+      <header className={`sticky top-0 z-[500] border-line bg-white md:border-b ${expanded ? "md:pb-5" : ""} ${isHome ? "" : "hidden md:block"}`}>
         {/* Desktop */}
         <div className={`mx-auto hidden h-20 items-center justify-between px-6 md:flex xl:px-20 ${narrow ? "max-w-[1280px]" : ""}`}>
           <div className="flex-1">
@@ -186,7 +225,7 @@ export default function Header() {
             </button>
           )}
           <div className="flex flex-1 items-center justify-end gap-1">
-            <Link href="/hosting" className="hidden rounded-full px-4 py-3 text-sm font-semibold hover:bg-soft lg:block">
+            <Link href="/switch?to=hosting" className="hidden rounded-full px-4 py-3 text-sm font-semibold hover:bg-soft lg:block">
               {user?.is_host ? "Switch to hosting" : "Airbnb your home"}
             </Link>
             <button onClick={() => toast("English (IN) · ₹ INR")} className="mr-2 rounded-full p-3 hover:bg-soft" aria-label="Language and currency">
@@ -201,37 +240,16 @@ export default function Header() {
           </div>
         )}
 
-        {/* Mobile */}
-        {narrow ? null : isHome ? (
-          <div className="flex items-center gap-2 px-4 py-3 md:hidden">
+        {/* Mobile: only Explore has a search bar, like the app */}
+        {isHome && (
+          <div className="px-4 pb-3 pt-4 md:hidden">
             <button
               onClick={() => setMobileOpen(true)}
-              className="flex flex-1 items-center gap-3 rounded-full border border-line bg-white py-2 pl-4 pr-3 text-left shadow-pill"
+              className="flex w-full items-center justify-center gap-2.5 rounded-full bg-white py-4 text-[15px] font-semibold shadow-[0_3px_16px_rgba(0,0,0,0.14)]"
             >
-              <Search size={18} strokeWidth={2.5} className="shrink-0 text-ink" />
-              <div className="flex-1 overflow-hidden">
-                <div className="truncate text-sm font-semibold leading-tight text-ink">
-                  {params.get("location") || "Where to?"}
-                </div>
-                <div className="truncate text-[11px] text-muted">
-                  {ci && co ? `${shortDate(ci)} – ${shortDate(co)}` : "Anywhere"} · {g ? plural(g, "guest") : "Any week · Add guests"}
-                </div>
-              </div>
+              <Search size={18} strokeWidth={2.5} />
+              {params.get("location") || "Start your search"}
             </button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between px-4 py-3 md:hidden">
-            <Logo />
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setMobileOpen(true)}
-                className="flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-xs font-semibold shadow-pill"
-              >
-                <Search size={14} strokeWidth={2.5} />
-                Search
-              </button>
-              <UserMenu />
-            </div>
           </div>
         )}
       </header>
@@ -245,37 +263,52 @@ export default function Header() {
   );
 }
 
+/** Bottom tab bar on phones. Guest and host modes have different tabs; sub-screens (editor, threads, checkout) hide it. */
 export function MobileNav() {
   const pathname = usePathname();
   const { user, setLoginOpen } = useUser();
+  if (pathname === "/switch" || /^\/(rooms|book)\b|^\/messages\/.+|^\/hosting\/(listings|calendar|messages)\/.+/.test(pathname)) return null;
 
-  // Hide mobile bottom nav on listing details and checkout (they have their own fixed action bars)
-  if (pathname.startsWith("/rooms") || pathname.startsWith("/book")) {
-    return null;
-  }
+  const tab = (href: string, label: string, icon: React.ReactNode, active: boolean) => (
+    <Link key={href} href={href} className={`flex flex-1 flex-col items-center gap-1 text-[11px] ${active ? "font-semibold text-rausch" : "text-muted"}`}>
+      {icon}
+      {label}
+    </Link>
+  );
 
-  const tab = (href: string, label: string, icon: React.ReactNode) => {
-    const active = pathname === href || (href === "/hosting" && pathname.startsWith("/hosting"));
-    return (
-      <Link href={href} className={`flex flex-col items-center gap-1 text-[10px] ${active ? "font-semibold text-rausch" : "text-muted"}`}>
-        {icon}
-        {label}
-      </Link>
-    );
-  };
+  const hosting = pathname.startsWith("/hosting");
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-[500] flex justify-around border-t border-line bg-white py-2 md:hidden">
-      {tab("/", "Explore", <Search size={22} />)}
-      {tab("/wishlists", "Wishlists", <Heart size={22} />)}
-      {tab("/trips", "Trips", <Belo size={22} />)}
-      {user ? (
-        tab("/hosting", user.is_host ? "Hosting" : "Profile", <Avatar src={user.avatar_url} name={user.name} size={22} />)
+    <nav className="fixed inset-x-0 bottom-0 z-[500] flex border-t border-line bg-white pb-[max(8px,env(safe-area-inset-bottom))] pt-2 md:hidden">
+      {hosting ? (
+        HOST_TABS.map((t) => tab(t.href, t.label, <t.icon size={24} strokeWidth={1.6} />, hostTabActive(t.href, pathname)))
       ) : (
-        <button onClick={() => setLoginOpen(true)} className="flex flex-col items-center gap-1 text-[10px] text-muted">
-          <UserRound size={22} />
-          Log in
-        </button>
+        <>
+          {tab("/", "Explore", <Search size={24} strokeWidth={1.6} />, pathname === "/")}
+          {tab("/wishlists", "Wishlists", <Heart size={24} strokeWidth={1.6} />, pathname === "/wishlists")}
+          {tab("/trips", "Trips", <Belo size={24} />, pathname.startsWith("/trips"))}
+          {user && tab("/messages", "Messages", <MessageSquare size={24} strokeWidth={1.6} />, pathname.startsWith("/messages"))}
+          {user ? (
+            tab("/profile", "Profile", <span className={`rounded-full ${pathname === "/profile" ? "ring-2 ring-rausch ring-offset-1" : ""}`}><Avatar src={user.avatar_url} name={user.name} size={24} /></span>, pathname === "/profile")
+          ) : (
+            <button onClick={() => setLoginOpen(true)} className="flex flex-1 flex-col items-center gap-1 text-[11px] text-muted">
+              <UserRound size={24} strokeWidth={1.6} />
+              Log in
+            </button>
+          )}
+        </>
       )}
     </nav>
+  );
+}
+
+/** Floating black pill above the tab bar ("Switch to hosting" / "Switch to travelling"). */
+export function SwitchPill({ to }: { to: "hosting" | "travelling" }) {
+  return (
+    <Link
+      href={`/switch?to=${to}`}
+      className="fixed bottom-24 left-1/2 z-[450] flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-ink px-6 py-3.5 text-[15px] font-semibold text-white shadow-card md:bottom-10"
+    >
+      <ArrowLeftRight size={18} /> Switch to {to}
+    </Link>
   );
 }

@@ -40,7 +40,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_URL}/api${path}`, { ...init, headers });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new Error(errorMessage(body, `Something went wrong (${res.status})`));
+    throw Object.assign(new Error(errorMessage(body, `Something went wrong (${res.status})`)), { status: res.status });
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
