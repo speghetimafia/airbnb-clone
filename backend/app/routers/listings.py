@@ -93,7 +93,11 @@ def search(
     q = q.where(*filters)
     total = db.scalar(select(func.count()).select_from(select(Listing.id).where(*filters).subquery()))
     rows = db.execute(q.order_by(Listing.id).offset((page - 1) * page_size).limit(page_size)).all()
-    return Page(items=[to_card(*r) for r in rows], total=total, page=page, pages=ceil(total / page_size))
+    items = [to_card(*r) for r in rows]
+    if check_in and check_out:
+        for card, (listing, *_) in zip(items, rows):
+            card.stay_total = rules.quote(listing, check_in, check_out)["total"]
+    return Page(items=items, total=total, page=page, pages=ceil(total / page_size))
 
 
 @router.get("/{listing_id}", response_model=ListingDetail)
