@@ -47,6 +47,7 @@ class ListingCard(BaseModel):
     rating: float | None
     review_count: int
     host_is_superhost: bool
+    stay_total: int | None = None  # full price incl. fees, only when searching with dates
 
 
 class Page(BaseModel):
