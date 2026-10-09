@@ -27,11 +27,13 @@ Study based on `https://www.airbnb.co.in` (Desktop @ 1440px and Mobile @ 375px v
 
 ## 2. Typography
 
-Airbnb utilizes proprietary font **Airbnb Cereal VF**. For high-fidelity reproduction without proprietary font licensing, the exact fallback font stack is implemented:
+Airbnb's typeface **Airbnb Cereal** is self-hosted from `app/fonts/` via `next/font/local` (Book 400, Medium 500–600, Bold 700, ExtraBold 800), with the system stack as fallback:
 
 ```css
-font-family: "Circular", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+font-family: var(--font-cereal), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 ```
+
+Medium covers weight 600 because the UI's `font-semibold` matches Cereal Medium on airbnb.com. Cereal is © Airbnb (all rights reserved) and is included here only for this non-commercial demo.
 
 ### Hierarchy & Scale
 
