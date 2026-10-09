@@ -192,10 +192,12 @@ def seed(db):
     def book(listing, guest, start, nights, guests=2, status="confirmed"):
         nights = max(nights, listing.min_nights)
         end = start + timedelta(days=nights)
-        b = Booking(listing=listing, guest=guest, check_in=start, check_out=end,
+        # Booked a few weeks before arrival (never in the future), so message timestamps read naturally.
+        booked_at = min(now, datetime.combine(start - timedelta(days=rng.randint(7, 40)), datetime.min.time()) + timedelta(hours=11))
+        b = Booking(listing=listing, guest=guest, check_in=start, check_out=end, created_at=booked_at,
                     guests=min(guests, listing.max_guests), status=status,
                     **rules.price_snapshot(listing, start, end))
-        b.messages = rules.render_messages(b, listing, guest.name, now)
+        b.messages = rules.render_messages(b, listing, guest.name, booked_at)
         db.add(b)
         return b
 

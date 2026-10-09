@@ -26,8 +26,9 @@ async function fetchSession(): Promise<{ user: UserDetail | null; saved: Set<num
   try {
     const [me, ids] = await Promise.all([api<UserDetail>("/me"), api<number[]>("/wishlist/ids")]);
     return { user: me, saved: new Set(ids) };
-  } catch {
-    session.set(null); // stale id (e.g. DB reseeded)
+  } catch (e) {
+    // Only forget the session if the server says this user doesn't exist; keep it through network blips.
+    if ((e as { status?: number }).status === 401) session.set(null);
     return { user: null, saved: new Set() };
   }
 }

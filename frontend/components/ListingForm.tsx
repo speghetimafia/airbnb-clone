@@ -15,7 +15,8 @@ const BLANK: ListingInput = {
   title: "", description: "", property_type: "House", category: "Trending", city: "", state: "", address: "",
   lat: 15.4989, lng: 73.8278, max_guests: 2, bedrooms: 1, beds: 1, baths: 1, base_price: 3000, weekend_price: null,
   cleaning_fee: 500, weekly_discount_pct: 0, monthly_discount_pct: 0, min_nights: 1, max_nights: 30,
-  check_in_time: "14:00", check_out_time: "11:00", photo_urls: [], amenity_ids: [],
+  check_in_time: "14:00", check_out_time: "11:00", advance_notice_days: 0, availability_window_days: 365, is_listed: true,
+  photo_urls: [], amenity_ids: [],
 };
 
 export function toInput(l: ListingDetail): ListingInput {
