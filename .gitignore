@@ -10,3 +10,4 @@ uploads/
 .DS_Store
 .pytest_cache/
 docs/gemini-frontend-prompt.md
+docs/refference/
