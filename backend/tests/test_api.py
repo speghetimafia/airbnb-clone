@@ -1,5 +1,6 @@
 import os
 import tempfile
+import time
 from datetime import date, timedelta
 
 os.environ["DATA_DIR"] = tempfile.mkdtemp()  # isolated DB, set before the app imports
@@ -96,6 +97,17 @@ def test_automated_messages_render_and_schedule():
     assert [m["title"] for m in msgs] == ["Wifi"]  # the day-before one isn't due yet
     assert msgs[0]["body"].startswith("Hi Arjun, wifi is abc. https://maps.google.com/?q=15.5,73.8")
     assert client.get(f"/api/bookings/{b['id']}/messages", headers=OTHER_GUEST).status_code == 403
+
+
+def test_last_minute_booking_orders_messages_after_confirmation():
+    lid = new_listing(min_nights=1)["id"]
+    client.post(f"/api/listings/{lid}/templates", json={"title": "Confirmed", "body": "In at {check_in_time}", "trigger": "on_confirm"}, headers=HOST)
+    client.post(f"/api/listings/{lid}/templates", json={"title": "Day before", "body": "x", "trigger": "day_before_checkin"}, headers=HOST)
+    b = client.post("/api/bookings", json={"listing_id": lid, "check_in": D(0), "check_out": D(1), "guests": 1}, headers=GUEST).json()
+    time.sleep(1.1)  # the day-before message is scheduled 1s after confirmation
+    msgs = client.get(f"/api/bookings/{b['id']}/messages", headers=GUEST).json()
+    assert [m["title"] for m in msgs] == ["Confirmed", "Day before"]
+    assert msgs[0]["body"] == "In at 2:00 PM"
 
 
 def test_review_only_after_checkout_once():

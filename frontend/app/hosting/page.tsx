@@ -165,7 +165,7 @@ export default function Hosting() {
                       <td className="p-4">
                         <Link href={`/rooms/${l.id}`} className="flex items-center gap-4 hover:underline">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={img(l.photos[0])} alt="" className="h-12 w-16 rounded-md object-cover" />
+                          <img src={img(l.photos[0], 200)} alt="" className="h-12 w-16 rounded-md object-cover" />
                           <span className="max-w-[260px] truncate font-semibold">{l.title}</span>
                         </Link>
                       </td>

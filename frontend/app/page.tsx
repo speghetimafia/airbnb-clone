@@ -120,7 +120,7 @@ function Explore() {
   return (
     <>
       {/* Category row */}
-      <div className="sticky top-[73px] z-[300] bg-white pt-3 shadow-[0_1px_0_#ebebeb] md:top-20">
+      <div className="sticky top-[71px] z-[300] bg-white pt-3 shadow-[0_1px_0_#ebebeb] md:top-20">
         <div className="mx-auto flex max-w-[1760px] items-center gap-6 px-6 xl:px-20">
           <div className="no-scrollbar flex flex-1 gap-8 overflow-x-auto">
             {CATEGORIES.map(({ name, icon: Icon }) => {
@@ -153,7 +153,7 @@ function Explore() {
         <section className={`px-6 pt-6 xl:px-20 ${showMap ? "lg:w-[58%] lg:!px-6 xl:!pl-20" : ""} ${showMap ? "hidden md:block" : ""}`}>
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm font-semibold">
-              {total === null ? " " : `${total > 0 ? `Over ${total} homes` : "No homes"}${location ? ` in ${location}` : ""}`}
+              {total === null ? " " : `${total > 0 ? `${total} homes` : "No homes"}${location ? ` in ${location}` : ""}`}
             </p>
             <button onClick={() => setFiltersOpen(true)} className="flex items-center gap-2 rounded-full border border-line px-3 py-2 text-xs font-semibold md:hidden">
               <SlidersHorizontal size={14} /> Filters {nFilters > 0 && `(${nFilters})`}

@@ -153,7 +153,7 @@ function Checkout() {
             {listing && (
               <div className="flex gap-4 border-b border-line pb-6">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img(listing.photos[0]?.url)} alt="" className="h-[106px] w-[124px] rounded-lg object-cover" />
+                <img src={img(listing.photos[0]?.url, 300)} alt="" className="h-[106px] w-[124px] rounded-lg object-cover" />
                 <div className="text-sm">
                   <div className="text-xs text-muted">Entire {listing.property_type.toLowerCase()}</div>
                   <div className="mb-2">{listing.title}</div>

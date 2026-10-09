@@ -43,7 +43,7 @@ export default function ListingCard({ listing: l, checkIn, checkOut, onHover }: 
         <div className="flex h-full transition-transform duration-300" style={{ transform: `translateX(-${i * 100}%)` }}>
           {l.photos.map((p, n) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={n} src={img(p)} alt={n === 0 ? l.title : ""} loading="lazy" className="h-full w-full shrink-0 object-cover" />
+            <img key={n} src={img(p, 720)} alt={n === 0 ? l.title : ""} loading="lazy" className="h-full w-full shrink-0 object-cover" />
           ))}
         </div>
         {l.rating && l.rating >= 4.7 && l.review_count >= 3 && (

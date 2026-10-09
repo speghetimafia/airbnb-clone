@@ -153,7 +153,7 @@ function Room() {
       </button>
       <div className="mb-6 flex items-end justify-between gap-4">
         <h1 className="text-[26px] font-semibold leading-tight">{l.title}</h1>
-        <div className="flex shrink-0 gap-2 text-sm font-semibold">
+        <div className="hidden shrink-0 gap-2 text-sm font-semibold md:flex">
           <button
             onClick={() => navigator.clipboard?.writeText(location.href).then(() => toast("Link copied"))}
             className="flex items-center gap-2 rounded-lg px-3 py-2 underline hover:bg-soft"

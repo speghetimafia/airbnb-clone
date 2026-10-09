@@ -205,7 +205,7 @@ def seed(db):
             if cursor > today - timedelta(days=30):
                 break
             b = book(listing, rng.choice(guests), cursor, rng.randint(2, 4))
-            rating, comment = rng.choice(REVIEWS)
+            rating, comment = rng.choices(REVIEWS, weights=[6, 6, 2, 5, 2, 5, 1, 5])[0]  # skew positive, like real Airbnb
             db.add(Review(booking=b, listing_id=listing.id, author=b.guest, rating=rating, comment=comment,
                           created_at=datetime.combine(b.check_out, datetime.min.time()) + timedelta(hours=15)))
             cursor = b.check_out + timedelta(days=rng.randint(10, 40))

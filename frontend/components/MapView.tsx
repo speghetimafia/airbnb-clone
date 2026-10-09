@@ -8,8 +8,8 @@ import { img } from "@/lib/api";
 import { money } from "@/lib/format";
 import type { ListingCard } from "@/lib/types";
 
-const TILES = "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
-const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>';
+const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 function FitBounds({ points }: { points: [number, number][] }) {
   const map = useMap();
@@ -37,7 +37,7 @@ export default function MapView({ listings, activeId }: { listings: ListingCard[
           <Popup closeButton={false} minWidth={260}>
             <Link href={`/rooms/${l.id}`} className="block !text-ink">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img(l.photos[0])} alt={l.title} className="mb-2 h-40 w-full rounded-lg object-cover" />
+              <img src={img(l.photos[0], 600)} alt={l.title} className="mb-2 h-40 w-full rounded-lg object-cover" />
               <div className="font-semibold">{l.property_type} in {l.city}</div>
               <div className="text-muted">{l.title}</div>
               <div className="mt-1"><b>{money(l.base_price)}</b> night</div>
