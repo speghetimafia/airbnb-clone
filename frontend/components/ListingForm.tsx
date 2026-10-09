@@ -24,22 +24,98 @@ export function toInput(l: ListingDetail): ListingInput {
   return { ...picked, photo_urls: l.photos.map((p) => p.url), amenity_ids: l.amenities.map((a) => a.id) };
 }
 
-type Props = { initial?: ListingInput; submitLabel: string; onSubmit: (data: ListingInput) => Promise<void>; onBack: () => void };
+// ---- Field groups: the create form uses all of them, the listing editor shows one per screen. ----
 
-export default function ListingForm({ initial = BLANK, submitLabel, onSubmit, onBack }: Props) {
-  const [f, setF] = useState<ListingInput>(initial);
-  const [amenities, setAmenities] = useState<Amenity[]>([]);
+export type Fields = { f: ListingInput; set: <K extends keyof ListingInput>(k: K, v: ListingInput[K]) => void };
+
+export const inputCls = "w-full rounded-lg border border-[#b0b0b0] px-4 py-3 outline-none focus:border-ink focus:ring-1 focus:ring-ink";
+export const labelCls = "mb-1 block text-sm font-semibold";
+const num = (v: string) => (v === "" ? 0 : Number(v));
+
+export const NOTICE_OPTIONS = [0, 1, 2, 3, 7];
+export const noticeLabel = (d: number) => (d === 0 ? "Same day" : `At least ${d} day${d > 1 ? "s" : ""}`);
+export const WINDOW_OPTIONS = [90, 180, 270, 365, 730];
+export const windowLabel = (d: number) => `${Math.round(d / 30.4)} months in advance`;
+
+export function BasicsFields({ f, set }: Fields) {
+  return (
+    <>
+      <label className={labelCls}>Title</label>
+      <input className={inputCls} required minLength={3} maxLength={200} value={f.title} onChange={(e) => set("title", e.target.value)} placeholder="Sea-view cottage with a private garden" />
+      <label className={`${labelCls} mt-6`}>Description</label>
+      <textarea className={inputCls} required minLength={10} rows={6} value={f.description} onChange={(e) => set("description", e.target.value)} placeholder="What makes your place special?" />
+      <TypeFields f={f} set={set} />
+    </>
+  );
+}
+
+export function TypeFields({ f, set }: Fields) {
+  return (
+    <div className="mt-6 grid gap-6 sm:grid-cols-2">
+      <div>
+        <label className={labelCls}>Property type</label>
+        <select className={inputCls} value={f.property_type} onChange={(e) => set("property_type", e.target.value)}>
+          {PROPERTY_TYPES.map((t) => <option key={t}>{t}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className={labelCls}>Category</label>
+        <select className={inputCls} value={f.category} onChange={(e) => set("category", e.target.value)}>
+          {CATEGORIES.map((c) => <option key={c.name}>{c.name}</option>)}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+export function LocationFields({ f, set }: Fields) {
+  return (
+    <>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <label className={labelCls}>Street address</label>
+          <input className={inputCls} value={f.address} onChange={(e) => set("address", e.target.value)} placeholder="House no., street, area" />
+        </div>
+        <div>
+          <label className={labelCls}>City</label>
+          <input className={inputCls} required value={f.city} onChange={(e) => set("city", e.target.value)} />
+        </div>
+        <div>
+          <label className={labelCls}>State</label>
+          <input className={inputCls} required value={f.state} onChange={(e) => set("state", e.target.value)} />
+        </div>
+        <div>
+          <label className={labelCls}>Latitude</label>
+          <input className={inputCls} type="number" step="any" min={-90} max={90} required value={f.lat} onChange={(e) => set("lat", num(e.target.value))} />
+        </div>
+        <div>
+          <label className={labelCls}>Longitude</label>
+          <input className={inputCls} type="number" step="any" min={-180} max={180} required value={f.lng} onChange={(e) => set("lng", num(e.target.value))} />
+        </div>
+      </div>
+      <div className="mt-6">
+        <PinMap lat={f.lat} lng={f.lng} zoom={10} height={320} onPick={(lat, lng) => { set("lat", lat); set("lng", lng); }} />
+      </div>
+    </>
+  );
+}
+
+export function RoomsFields({ f, set }: Fields) {
+  return (
+    <div className="divide-y divide-line">
+      <Counter label="Guests" value={f.max_guests} min={1} max={50} onChange={(v) => set("max_guests", v)} />
+      <Counter label="Bedrooms" value={f.bedrooms} min={0} max={50} onChange={(v) => set("bedrooms", v)} />
+      <Counter label="Beds" value={f.beds} min={1} max={100} onChange={(v) => set("beds", v)} />
+      <Counter label="Bathrooms" value={f.baths} min={0} max={50} onChange={(v) => set("baths", v)} />
+    </div>
+  );
+}
+
+export function PhotosField({ f, set, onUploading }: Fields & { onUploading?: (busy: boolean) => void }) {
   const [photoUrl, setPhotoUrl] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    api<Amenity[]>("/amenities").then(setAmenities);
-  }, []);
-
-  const set = <K extends keyof ListingInput>(k: K, v: ListingInput[K]) => setF((prev) => ({ ...prev, [k]: v }));
-  const num = (k: keyof ListingInput) => (e: React.ChangeEvent<HTMLInputElement>) => set(k, (e.target.value === "" ? 0 : Number(e.target.value)) as never);
+  const urls = f.photo_urls;
 
   const addUrl = () => {
     try {
@@ -47,28 +123,190 @@ export default function ListingForm({ initial = BLANK, submitLabel, onSubmit, on
     } catch {
       return toast.error("Enter a valid image URL");
     }
-    set("photo_urls", [...f.photo_urls, photoUrl]);
+    set("photo_urls", [...urls, photoUrl]);
     setPhotoUrl("");
   };
 
   const upload = async (files: FileList | null) => {
     if (!files?.length) return;
     setUploading(true);
+    onUploading?.(true);
     try {
-      const urls: string[] = [];
+      const added: string[] = [];
       for (const file of Array.from(files)) {
         const body = new FormData();
         body.append("file", file);
-        urls.push((await api<{ url: string }>("/uploads", { method: "POST", body })).url);
+        added.push((await api<{ url: string }>("/uploads", { method: "POST", body })).url);
       }
-      setF((prev) => ({ ...prev, photo_urls: [...prev.photo_urls, ...urls] }));
+      set("photo_urls", [...urls, ...added]);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setUploading(false);
+      onUploading?.(false);
       if (fileRef.current) fileRef.current.value = "";
     }
   };
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {urls.map((u, i) => (
+          <div key={u + i} className="group relative aspect-[4/3] overflow-hidden rounded-xl bg-soft">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={img(u, 500)} alt="" className="h-full w-full object-cover" />
+            {i === 0 && <span className="absolute left-2 top-2 rounded-md bg-white px-2 py-1 text-xs font-semibold shadow">Cover photo</span>}
+            <div className="absolute right-2 top-2 flex gap-1">
+              {i > 0 && (
+                <button type="button" onClick={() => set("photo_urls", [u, ...urls.filter((_, j) => j !== i)])} className="rounded-full bg-white px-2 py-1 text-xs font-semibold shadow">
+                  Make cover
+                </button>
+              )}
+              <button type="button" aria-label="Remove photo" onClick={() => set("photo_urls", urls.filter((_, j) => j !== i))} className="rounded-full bg-white p-1.5 shadow">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#b0b0b0] text-sm font-semibold hover:border-ink"
+        >
+          <ImagePlus size={28} strokeWidth={1.5} />
+          {uploading ? "Uploading…" : "Upload photos"}
+        </button>
+      </div>
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => upload(e.target.files)} />
+      <div className="mt-4 flex gap-2">
+        <input
+          className={inputCls}
+          value={photoUrl}
+          onChange={(e) => setPhotoUrl(e.target.value)}
+          placeholder="https://images.unsplash.com/…"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addUrl();
+            }
+          }}
+        />
+        <button type="button" onClick={addUrl} className="shrink-0 rounded-lg border border-ink px-5 font-semibold hover:bg-soft">Add link</button>
+      </div>
+    </>
+  );
+}
+
+export function AmenitiesField({ f, set }: Fields) {
+  const [amenities, setAmenities] = useState<Amenity[]>([]);
+  useEffect(() => {
+    api<Amenity[]>("/amenities").then(setAmenities);
+  }, []);
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {amenities.map((a) => {
+        const on = f.amenity_ids.includes(a.id);
+        return (
+          <button
+            type="button"
+            key={a.id}
+            onClick={() => set("amenity_ids", on ? f.amenity_ids.filter((x) => x !== a.id) : [...f.amenity_ids, a.id])}
+            className={`flex flex-col gap-2 rounded-xl border p-4 text-left text-sm font-semibold ${on ? "border-ink bg-soft ring-1 ring-ink" : "border-line hover:border-ink"}`}
+          >
+            <AmenityIcon icon={a.icon} size={28} /> {a.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function PriceFields({ f, set }: Fields) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label className={labelCls}>Nightly price (₹)</label>
+        <input className={inputCls} type="number" min={1} required value={f.base_price || ""} onChange={(e) => set("base_price", num(e.target.value))} />
+      </div>
+      <div>
+        <label className={labelCls}>Weekend price, Fri & Sat (₹, optional)</label>
+        <input className={inputCls} type="number" min={1} value={f.weekend_price ?? ""} onChange={(e) => set("weekend_price", e.target.value ? Number(e.target.value) : null)} placeholder="Same as nightly" />
+      </div>
+      <div>
+        <label className={labelCls}>Cleaning fee (₹ per stay)</label>
+        <input className={inputCls} type="number" min={0} value={f.cleaning_fee} onChange={(e) => set("cleaning_fee", num(e.target.value))} />
+      </div>
+    </div>
+  );
+}
+
+export function DiscountFields({ f, set }: Fields) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label className={labelCls}>Weekly discount (7+ nights, %)</label>
+        <input className={inputCls} type="number" min={0} max={90} value={f.weekly_discount_pct} onChange={(e) => set("weekly_discount_pct", num(e.target.value))} />
+      </div>
+      <div>
+        <label className={labelCls}>Monthly discount (28+ nights, %)</label>
+        <input className={inputCls} type="number" min={0} max={90} value={f.monthly_discount_pct} onChange={(e) => set("monthly_discount_pct", num(e.target.value))} />
+      </div>
+    </div>
+  );
+}
+
+export function AvailabilityFields({ f, set }: Fields) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label className={labelCls}>Minimum nights</label>
+        <input className={inputCls} type="number" min={1} max={1125} required value={f.min_nights} onChange={(e) => set("min_nights", num(e.target.value))} />
+      </div>
+      <div>
+        <label className={labelCls}>Maximum nights</label>
+        <input className={inputCls} type="number" min={1} max={1125} required value={f.max_nights} onChange={(e) => set("max_nights", num(e.target.value))} />
+      </div>
+      <div>
+        <label className={labelCls}>Advance notice</label>
+        <select className={inputCls} value={f.advance_notice_days} onChange={(e) => set("advance_notice_days", Number(e.target.value))}>
+          {NOTICE_OPTIONS.map((d) => <option key={d} value={d}>{noticeLabel(d)}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className={labelCls}>Availability window</label>
+        <select className={inputCls} value={f.availability_window_days} onChange={(e) => set("availability_window_days", Number(e.target.value))}>
+          {WINDOW_OPTIONS.map((d) => <option key={d} value={d}>{windowLabel(d)}</option>)}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+export function TimesFields({ f, set }: Fields) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label className={labelCls}>Check-in from</label>
+        <input className={inputCls} type="time" required value={f.check_in_time} onChange={(e) => set("check_in_time", e.target.value)} />
+      </div>
+      <div>
+        <label className={labelCls}>Checkout by</label>
+        <input className={inputCls} type="time" required value={f.check_out_time} onChange={(e) => set("check_out_time", e.target.value)} />
+      </div>
+    </div>
+  );
+}
+
+// ---- Create flow ----
+
+type Props = { submitLabel: string; onSubmit: (data: ListingInput) => Promise<void>; onBack: () => void };
+
+export default function ListingForm({ submitLabel, onSubmit, onBack }: Props) {
+  const [f, setF] = useState<ListingInput>(BLANK);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const set: Fields["set"] = (k, v) => setF((prev) => ({ ...prev, [k]: v }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,192 +320,26 @@ export default function ListingForm({ initial = BLANK, submitLabel, onSubmit, on
     }
   };
 
-  const input = "w-full rounded-lg border border-[#b0b0b0] px-4 py-3 outline-none focus:border-ink focus:ring-1 focus:ring-ink";
-  const label = "mb-1 block text-sm font-semibold";
-  const section = "border-b border-line py-10";
-  const h2 = "mb-1 text-[22px] font-semibold";
-  const sub = "mb-6 text-muted";
+  const section = (title: string, sub: string | null, body: React.ReactNode) => (
+    <section className="border-b border-line py-10">
+      <h2 className="mb-1 text-[22px] font-semibold">{title}</h2>
+      {sub && <p className="mb-6 text-muted">{sub}</p>}
+      <div className={sub ? "" : "mt-6"}>{body}</div>
+    </section>
+  );
 
   return (
     <form onSubmit={submit} className="mx-auto max-w-3xl px-6 pb-32 pt-8">
       <button type="button" onClick={onBack} className="mb-6 flex items-center gap-2 text-sm font-semibold hover:underline">
         <ArrowLeft size={16} /> Back
       </button>
-
-      <section className={section}>
-        <h2 className={h2}>Tell guests about your place</h2>
-        <p className={sub}>Short titles work best. Have fun with it, you can always change it later.</p>
-        <label className={label}>Title</label>
-        <input className={input} required minLength={3} maxLength={200} value={f.title} onChange={(e) => set("title", e.target.value)} placeholder="Sea-view cottage with a private garden" />
-        <label className={`${label} mt-6`}>Description</label>
-        <textarea className={input} required minLength={10} rows={6} value={f.description} onChange={(e) => set("description", e.target.value)} placeholder="What makes your place special?" />
-        <div className="mt-6 grid gap-6 sm:grid-cols-2">
-          <div>
-            <label className={label}>Property type</label>
-            <select className={input} value={f.property_type} onChange={(e) => set("property_type", e.target.value)}>
-              {PROPERTY_TYPES.map((t) => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={label}>Category</label>
-            <select className={input} value={f.category} onChange={(e) => set("category", e.target.value)}>
-              {CATEGORIES.map((c) => <option key={c.name}>{c.name}</option>)}
-            </select>
-          </div>
-        </div>
-      </section>
-
-      <section className={section}>
-        <h2 className={h2}>Where&apos;s your place located?</h2>
-        <p className={sub}>Guests see the exact address only after they book. Click the map to drop the pin.</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className={label}>Street address</label>
-            <input className={input} value={f.address} onChange={(e) => set("address", e.target.value)} placeholder="House no., street, area" />
-          </div>
-          <div>
-            <label className={label}>City</label>
-            <input className={input} required value={f.city} onChange={(e) => set("city", e.target.value)} />
-          </div>
-          <div>
-            <label className={label}>State</label>
-            <input className={input} required value={f.state} onChange={(e) => set("state", e.target.value)} />
-          </div>
-          <div>
-            <label className={label}>Latitude</label>
-            <input className={input} type="number" step="any" min={-90} max={90} required value={f.lat} onChange={num("lat")} />
-          </div>
-          <div>
-            <label className={label}>Longitude</label>
-            <input className={input} type="number" step="any" min={-180} max={180} required value={f.lng} onChange={num("lng")} />
-          </div>
-        </div>
-        <div className="mt-6">
-          <PinMap lat={f.lat} lng={f.lng} zoom={10} height={320} onPick={(lat, lng) => setF((p) => ({ ...p, lat, lng }))} />
-        </div>
-      </section>
-
-      <section className={section}>
-        <h2 className={h2}>Share some basics about your place</h2>
-        <div className="divide-y divide-line">
-          <Counter label="Guests" value={f.max_guests} min={1} max={50} onChange={(v) => set("max_guests", v)} />
-          <Counter label="Bedrooms" value={f.bedrooms} min={0} max={50} onChange={(v) => set("bedrooms", v)} />
-          <Counter label="Beds" value={f.beds} min={1} max={100} onChange={(v) => set("beds", v)} />
-          <Counter label="Bathrooms" value={f.baths} min={0} max={50} onChange={(v) => set("baths", v)} />
-        </div>
-      </section>
-
-      <section className={section}>
-        <h2 className={h2}>Add some photos</h2>
-        <p className={sub}>Upload images or paste image links. The first photo is your cover.</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {f.photo_urls.map((u, i) => (
-            <div key={u + i} className="group relative aspect-[4/3] overflow-hidden rounded-xl bg-soft">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img(u)} alt="" className="h-full w-full object-cover" />
-              {i === 0 && <span className="absolute left-2 top-2 rounded-md bg-white px-2 py-1 text-xs font-semibold shadow">Cover photo</span>}
-              <div className="absolute right-2 top-2 flex gap-1">
-                {i > 0 && (
-                  <button type="button" onClick={() => set("photo_urls", [u, ...f.photo_urls.filter((_, j) => j !== i)])} className="rounded-full bg-white px-2 py-1 text-xs font-semibold shadow">
-                    Make cover
-                  </button>
-                )}
-                <button type="button" aria-label="Remove photo" onClick={() => set("photo_urls", f.photo_urls.filter((_, j) => j !== i))} className="rounded-full bg-white p-1.5 shadow">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="flex aspect-[4/3] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#b0b0b0] text-sm font-semibold hover:border-ink"
-          >
-            <ImagePlus size={28} strokeWidth={1.5} />
-            {uploading ? "Uploading…" : "Upload photos"}
-          </button>
-        </div>
-        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={(e) => upload(e.target.files)} />
-        <div className="mt-4 flex gap-2">
-          <input className={input} value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://images.unsplash.com/…" onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addUrl();
-              }
-            }} />
-          <button type="button" onClick={addUrl} className="shrink-0 rounded-lg border border-ink px-5 font-semibold hover:bg-soft">Add link</button>
-        </div>
-      </section>
-
-      <section className={section}>
-        <h2 className={h2}>Tell guests what your place has to offer</h2>
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {amenities.map((a) => {
-            const on = f.amenity_ids.includes(a.id);
-            return (
-              <button
-                type="button"
-                key={a.id}
-                onClick={() => set("amenity_ids", on ? f.amenity_ids.filter((x) => x !== a.id) : [...f.amenity_ids, a.id])}
-                className={`flex flex-col gap-2 rounded-xl border p-4 text-left text-sm font-semibold ${on ? "border-ink bg-soft ring-1 ring-ink" : "border-line hover:border-ink"}`}
-              >
-                <AmenityIcon icon={a.icon} size={28} /> {a.name}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className={section}>
-        <h2 className={h2}>Pricing</h2>
-        <p className={sub}>Guests see a full breakdown. Airbnb adds a 14% guest service fee.</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className={label}>Nightly price (₹)</label>
-            <input className={input} type="number" min={1} required value={f.base_price || ""} onChange={num("base_price")} />
-          </div>
-          <div>
-            <label className={label}>Weekend price, Fri & Sat (₹, optional)</label>
-            <input className={input} type="number" min={1} value={f.weekend_price ?? ""} onChange={(e) => set("weekend_price", e.target.value ? Number(e.target.value) : null)} placeholder="Same as nightly" />
-          </div>
-          <div>
-            <label className={label}>Cleaning fee (₹ per stay)</label>
-            <input className={input} type="number" min={0} value={f.cleaning_fee} onChange={num("cleaning_fee")} />
-          </div>
-          <div />
-          <div>
-            <label className={label}>Weekly discount (7+ nights, %)</label>
-            <input className={input} type="number" min={0} max={90} value={f.weekly_discount_pct} onChange={num("weekly_discount_pct")} />
-          </div>
-          <div>
-            <label className={label}>Monthly discount (28+ nights, %)</label>
-            <input className={input} type="number" min={0} max={90} value={f.monthly_discount_pct} onChange={num("monthly_discount_pct")} />
-          </div>
-        </div>
-      </section>
-
-      <section className={section}>
-        <h2 className={h2}>Availability rules</h2>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className={label}>Minimum nights</label>
-            <input className={input} type="number" min={1} max={365} required value={f.min_nights} onChange={num("min_nights")} />
-          </div>
-          <div>
-            <label className={label}>Maximum nights</label>
-            <input className={input} type="number" min={1} max={365} required value={f.max_nights} onChange={num("max_nights")} />
-          </div>
-          <div>
-            <label className={label}>Check-in from</label>
-            <input className={input} type="time" required value={f.check_in_time} onChange={(e) => set("check_in_time", e.target.value)} />
-          </div>
-          <div>
-            <label className={label}>Checkout by</label>
-            <input className={input} type="time" required value={f.check_out_time} onChange={(e) => set("check_out_time", e.target.value)} />
-          </div>
-        </div>
-      </section>
+      {section("Tell guests about your place", "Short titles work best. Have fun with it, you can always change it later.", <BasicsFields f={f} set={set} />)}
+      {section("Where's your place located?", "Guests see the exact address only after they book. Click the map to drop the pin.", <LocationFields f={f} set={set} />)}
+      {section("Share some basics about your place", null, <RoomsFields f={f} set={set} />)}
+      {section("Add some photos", "Upload images or paste image links. The first photo is your cover.", <PhotosField f={f} set={set} onUploading={setUploading} />)}
+      {section("Tell guests what your place has to offer", null, <AmenitiesField f={f} set={set} />)}
+      {section("Pricing", "Guests see a full breakdown. Airbnb adds a 14% guest service fee.", <><PriceFields f={f} set={set} /><div className="mt-4" /><DiscountFields f={f} set={set} /></>)}
+      {section("Availability", null, <><AvailabilityFields f={f} set={set} /><div className="mt-4" /><TimesFields f={f} set={set} /></>)}
 
       <div className="fixed inset-x-0 bottom-0 z-[600] border-t border-line bg-white px-6 py-4">
         <div className="mx-auto flex max-w-3xl justify-between">

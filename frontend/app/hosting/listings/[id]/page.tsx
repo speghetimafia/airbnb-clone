@@ -1,216 +1,357 @@
 "use client";
 
-import { addDays, startOfDay } from "date-fns";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarDays, ChevronRight, Eye, Plus, Settings, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useRef, useState } from "react";
-import { DayPicker, type DateRange } from "react-day-picker";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { toast } from "sonner";
+import {
+  AmenitiesField, DiscountFields, type Fields, LocationFields, NOTICE_OPTIONS, PhotosField, RoomsFields, TimesFields, TypeFields,
+  WINDOW_OPTIONS, inputCls, noticeLabel, toInput, windowLabel,
+} from "@/components/ListingForm";
+import LoginPrompt from "@/components/LoginPrompt";
 import Modal from "@/components/Modal";
-import { del, post, put } from "@/lib/api";
-import { dateRange, fromISO, time12, toISO } from "@/lib/format";
-import type { Block, Booking, ListingDetail, Template, Trigger } from "@/lib/types";
+import TemplateEditor, { TRIGGERS } from "@/components/TemplateEditor";
+import { del, img, put } from "@/lib/api";
+import { money, plural, time12 } from "@/lib/format";
+import type { ListingDetail, ListingInput, Template } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
-import { useIsMobile } from "@/lib/useIsMobile";
 import { useUser } from "@/lib/user";
 
-const TRIGGERS: Record<Trigger, string> = {
-  on_confirm: "As soon as the booking is confirmed",
-  day_before_checkin: "1 day before check-in, 9:00 AM",
-  on_checkout: "On checkout day, 9:00 AM",
+type Screen =
+  | "status" | "photos" | "title" | "description" | "type" | "rooms" | "location" | "amenities"
+  | "pricing" | "discounts" | "availability" | "times";
+
+const SCREEN_TITLES: Record<Screen, string> = {
+  status: "Listing status", photos: "Photo tour", title: "Title", description: "Description", type: "Property type",
+  rooms: "Rooms and guests", location: "Location", amenities: "Amenities", pricing: "Pricing", discounts: "Discounts",
+  availability: "Availability", times: "Check-in and checkout",
 };
-const PLACEHOLDERS = ["guest_name", "host_name", "listing_title", "check_in", "check_out", "check_in_time", "check_out_time", "address", "maps_link"];
 
-/** Ranges are [start, end): show start..end-1 as taken nights. */
-const nights = (start: string, end: string) => ({ from: fromISO(start), to: addDays(fromISO(end), -1) });
-
-function CalendarTab({ listingId, bookings }: { listingId: number; bookings: Booking[] }) {
-  const blocks = useApi<Block[]>(`/listings/${listingId}/blocks`);
-  const [range, setRange] = useState<DateRange | undefined>();
-  const [note, setNote] = useState("");
-  const isMobile = useIsMobile();
-  const today = startOfDay(new Date());
-
-  const add = async () => {
-    if (!range?.from || !range.to) return;
-    try {
-      // The picker selects nights inclusively; the API stores [start, end).
-      await post(`/listings/${listingId}/blocks`, { start_date: toISO(range.from), end_date: toISO(addDays(range.to, 1)), note });
-      toast.success("Dates blocked");
-      setRange(undefined);
-      setNote("");
-      blocks.reload();
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
-  };
-  const remove = async (id: number) => {
-    await del(`/blocks/${id}`);
-    toast("Dates reopened");
-    blocks.reload();
-  };
-
-  const booked = bookings.map((b) => nights(b.check_in, b.check_out));
-  const blocked = (blocks.data ?? []).map((b) => nights(b.start_date, b.end_date));
-
+function Card({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
   return (
-    <div className="grid gap-10 lg:grid-cols-[auto_1fr]">
-      <div>
-        <DayPicker
-          mode="range"
-          selected={range}
-          onSelect={setRange}
-          numberOfMonths={isMobile ? 1 : 2}
-          startMonth={today}
-          disabled={[{ before: today }, ...booked, ...blocked]}
-          modifiers={{ booked, blocked }}
-          modifiersClassNames={{ booked: "cal-booked", blocked: "cal-blocked" }}
+    <button onClick={onClick} className="block w-full rounded-3xl bg-white p-7 text-left shadow-[0_2px_12px_rgba(0,0,0,0.08)] transition hover:shadow-[0_4px_16px_rgba(0,0,0,0.14)]">
+      <div className="mb-1 text-[17px] font-medium">{title}</div>
+      <div className="text-[17px] text-muted">{children}</div>
+    </button>
+  );
+}
+
+/** Three photos fanned out with the cover in front, like the app's "Photo tour" card. */
+function PhotoFan({ urls }: { urls: string[] }) {
+  const side = "absolute top-1/2 h-[80%] w-[34%] -translate-y-1/2 rounded-[28px] object-cover";
+  return (
+    <span className="relative mt-6 block h-[260px]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {urls[1] && <img src={img(urls[1], 400)} alt="" className={`${side} left-[4%]`} />}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {urls[2] && <img src={img(urls[2], 400)} alt="" className={`${side} right-[4%]`} />}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={img(urls[0], 700)} alt="" className="absolute left-1/2 top-0 z-10 h-full w-[56%] -translate-x-1/2 rounded-[40px] object-cover shadow-lg" />
+      <span className="absolute left-[26%] top-4 z-20 rounded-full bg-white px-4 py-2 text-sm font-medium text-ink shadow">{plural(urls.length, "photo")}</span>
+    </span>
+  );
+}
+
+/** Big-number setting card used on the Pricing and Availability screens. */
+function NumberCard({ label, value, onChange, prefix }: { label: string; value: number; onChange: (v: number) => void; prefix?: string }) {
+  return (
+    <label className="block rounded-3xl border border-line px-7 py-6">
+      <span className="text-[17px] font-medium">{label}</span>
+      <span className="mt-1 flex items-baseline text-[40px] font-bold leading-tight">
+        {prefix}
+        <input
+          inputMode="numeric"
+          value={value ? value.toLocaleString("en-IN") : ""}
+          onChange={(e) => onChange(Number(e.target.value.replace(/\D/g, "")))} // the API rejects out-of-range values
+          className="w-full bg-transparent outline-none"
         />
-        <div className="mt-2 flex gap-6 text-xs text-muted">
-          <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-[#fdecef]" /> Reserved</span>
-          <span className="flex items-center gap-2"><span className="cal-blocked h-3 w-3 rounded-full bg-[#e4e4e4]" /> Blocked by you</span>
-        </div>
-      </div>
-      <div className="space-y-8">
-        <div className="rounded-xl border border-line p-6">
-          <h3 className="mb-1 font-semibold">Block dates</h3>
-          <p className="mb-4 text-sm text-muted">
-            {range?.from && range.to ? `Nights of ${dateRange(toISO(range.from), toISO(addDays(range.to, 1)))}` : "Select the nights you want to close on the calendar."}
-          </p>
-          <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} placeholder="Note (e.g. family visiting, deep cleaning)" className="mb-4 w-full rounded-lg border border-[#b0b0b0] px-4 py-3 outline-none focus:border-ink" />
-          <button onClick={add} disabled={!range?.from || !range.to} className="rounded-lg bg-ink px-5 py-3 font-semibold text-white disabled:opacity-30">
-            Block these nights
-          </button>
-        </div>
-        <div>
-          <h3 className="mb-3 font-semibold">Blocked dates</h3>
-          {(blocks.data ?? []).length === 0 && <p className="text-sm text-muted">Nothing blocked. Guests can book any open night.</p>}
-          {(blocks.data ?? []).map((b) => (
-            <div key={b.id} className="flex items-center justify-between border-b border-line py-3 text-sm">
-              <span><b>{dateRange(b.start_date, b.end_date)}</b> {b.note && <span className="text-muted">· {b.note}</span>}</span>
-              <button onClick={() => remove(b.id)} className="font-semibold underline">Unblock</button>
-            </div>
-          ))}
-        </div>
-        <div>
-          <h3 className="mb-3 font-semibold">Upcoming reservations</h3>
-          {bookings.length === 0 && <p className="text-sm text-muted">No upcoming reservations.</p>}
-          {bookings.map((b) => (
-            <div key={b.id} className="flex justify-between border-b border-line py-3 text-sm">
-              <span>{b.guest.name} · {b.guests} guests</span>
-              <b>{dateRange(b.check_in, b.check_out)}</b>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
+      </span>
+    </label>
   );
 }
 
-function TemplateEditor({ listing, initial, onClose, onSaved }: { listing: ListingDetail; initial?: Template; onClose: () => void; onSaved: () => void }) {
-  const [t, setT] = useState({ title: initial?.title ?? "", body: initial?.body ?? "", trigger: initial?.trigger ?? ("on_confirm" as Trigger) });
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
+function SelectCard({ label, value, options, onChange }: { label: string; value: number; options: { value: number; label: string }[]; onChange: (v: number) => void }) {
+  return (
+    <label className="block rounded-3xl border border-line px-7 py-6">
+      <span className="text-[17px] font-medium">{label}</span>
+      <select value={value} onChange={(e) => onChange(Number(e.target.value))} className="mt-1 block w-full bg-transparent text-[17px] outline-none">
+        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </label>
+  );
+}
 
-  const insert = (ph: string) => {
-    const el = bodyRef.current;
-    const at = el?.selectionStart ?? t.body.length;
-    setT({ ...t, body: `${t.body.slice(0, at)}{${ph}}${t.body.slice(at)}` });
-    el?.focus();
+function ScreenBody({ screen, f, set, listing }: Fields & { screen: Screen; listing: ListingDetail }) {
+  switch (screen) {
+    case "photos": return <PhotosField f={f} set={set} />;
+    case "title":
+      return <textarea value={f.title} onChange={(e) => set("title", e.target.value)} maxLength={200} rows={3} className="w-full resize-none text-[28px] font-semibold outline-none" />;
+    case "description":
+      return <textarea value={f.description} onChange={(e) => set("description", e.target.value)} rows={12} className={inputCls} />;
+    case "type": return <TypeFields f={f} set={set} />;
+    case "rooms": return <RoomsFields f={f} set={set} />;
+    case "location": return <LocationFields f={f} set={set} />;
+    case "amenities": return <AmenitiesField f={f} set={set} />;
+    case "discounts": return <DiscountFields f={f} set={set} />;
+    case "times": return <TimesFields f={f} set={set} />;
+    case "pricing":
+      return (
+        <div className="space-y-6">
+          <NumberCard label="Base price" prefix="₹" value={f.base_price} onChange={(v) => set("base_price", v)} />
+          {f.weekend_price === null ? (
+            <div className="flex items-center justify-between rounded-3xl border border-line px-7 py-8">
+              <span className="text-[17px] font-medium">Custom weekend price</span>
+              <button onClick={() => set("weekend_price", f.base_price)} className="font-semibold underline">Add</button>
+            </div>
+          ) : (
+            <div className="relative">
+              <NumberCard label="Weekend price" prefix="₹" value={f.weekend_price} onChange={(v) => set("weekend_price", v)} />
+              <button onClick={() => set("weekend_price", null)} className="absolute right-7 top-6 text-sm font-semibold underline">Remove</button>
+            </div>
+          )}
+          <NumberCard label="Cleaning fee (per stay)" prefix="₹" value={f.cleaning_fee} onChange={(v) => set("cleaning_fee", v)} />
+          <div className="flex items-center justify-between rounded-3xl border border-line px-7 py-6 opacity-60">
+            <div>
+              <div className="text-[17px] font-medium">Smart Pricing</div>
+              <div className="text-muted">Automatically adjust prices to demand. Coming soon.</div>
+            </div>
+            <span className="h-8 w-14 rounded-full bg-[#b0b0b0] p-1"><span className="block h-6 w-6 rounded-full bg-white" /></span>
+          </div>
+        </div>
+      );
+    case "availability":
+      return (
+        <div className="space-y-6">
+          <NumberCard label="Minimum nights" value={f.min_nights} onChange={(v) => set("min_nights", v)} />
+          <NumberCard label="Maximum nights" value={f.max_nights} onChange={(v) => set("max_nights", v)} />
+          <SelectCard label="Advance notice" value={f.advance_notice_days} options={NOTICE_OPTIONS.map((d) => ({ value: d, label: noticeLabel(d) }))} onChange={(v) => set("advance_notice_days", v)} />
+          <SelectCard label="Availability window" value={f.availability_window_days} options={WINDOW_OPTIONS.map((d) => ({ value: d, label: windowLabel(d) }))} onChange={(v) => set("availability_window_days", v)} />
+          <Link href={`/hosting/calendar/${listing.id}`} className="flex items-center justify-between rounded-3xl border border-line px-7 py-6">
+            <span>
+              <span className="block text-[17px] font-medium">Calendar</span>
+              <span className="text-muted">Block or open specific nights</span>
+            </span>
+            <ChevronRight size={22} />
+          </Link>
+        </div>
+      );
+    case "status":
+      return (
+        <div className="space-y-4">
+          {[
+            { on: true, title: "Listed", text: "Guests can find your listing in search results and book available dates." },
+            { on: false, title: "Unlisted", text: "Guests can't book your listing or find it in search results." },
+          ].map((o) => (
+            <button key={o.title} onClick={() => set("is_listed", o.on)} className={`flex w-full gap-4 rounded-3xl border p-6 text-left ${f.is_listed === o.on ? "border-ink ring-1 ring-ink" : "border-line"}`}>
+              <span className={`mt-1.5 h-3 w-3 shrink-0 rounded-full ${o.on ? "bg-[#008a05]" : "bg-[#b0b0b0]"}`} />
+              <span>
+                <span className="block text-[17px] font-medium">{o.title}</span>
+                <span className="text-muted">{o.text}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      );
+  }
+}
+
+function Editor() {
+  const { id } = useParams<{ id: string }>();
+  const params = useSearchParams();
+  const router = useRouter();
+  const { user, ready, refresh } = useUser();
+  const { data: l, error, reload } = useApi<ListingDetail>(`/listings/${id}`);
+  const templates = useApi<Template[]>(user ? `/listings/${id}/templates` : null);
+  const [tab, setTab] = useState<"space" | "arrival">("space");
+  const [screen, setScreen] = useState<Screen | null>(params.get("edit") as Screen | null);
+  const [draft, setDraft] = useState<ListingInput | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<Template | "new" | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Opening a screen (also via ?edit=pricing) starts a fresh draft from the saved listing.
+  if (screen && l && !draft) setDraft(toInput(l));
+
+  if (ready && !user) return <LoginPrompt title="Hosting" text="Log in to edit your listing." />;
+  if (error) return <p className="p-20 text-center">{error}</p>;
+  if (!l || !user) return <div className="mx-auto mt-10 h-96 max-w-2xl animate-pulse rounded-3xl bg-soft" />;
+  if (user.id !== l.host.id) return <p className="p-20 text-center">Only the host can edit this listing.</p>;
+
+  const set: Fields["set"] = (k, v) => setDraft((p) => (p ? { ...p, [k]: v } : p));
+  const close = () => {
+    setScreen(null);
+    setDraft(null);
   };
-
-  const sample: Record<string, string> = {
-    guest_name: "Arjun", host_name: listing.host.name.split(" ")[0], listing_title: listing.title,
-    check_in: "Fri, 14 Nov 2026", check_out: "Sun, 16 Nov 2026", check_in_time: listing.check_in_time,
-    check_out_time: listing.check_out_time, address: listing.address || `${listing.city}, ${listing.state}`,
-    maps_link: `https://maps.google.com/?q=${listing.lat},${listing.lng}`,
-  };
-  const preview = t.body.replace(/\{(\w+)\}/g, (m, k) => sample[k] ?? m);
-
   const save = async () => {
+    if (!draft) return;
+    setSaving(true);
     try {
-      if (initial) await put(`/templates/${initial.id}`, t);
-      else await post(`/listings/${listing.id}/templates`, t);
-      toast.success("Message saved");
-      onSaved();
+      await put(`/listings/${l.id}`, { ...draft, weekend_price: draft.weekend_price || null });
+      toast.success("Saved");
+      reload();
+      close();
     } catch (e) {
       toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
     }
   };
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      size="lg"
-      title={initial ? "Edit scheduled message" : "New scheduled message"}
-      footer={
-        <div className="flex justify-between">
-          <button onClick={onClose} className="font-semibold underline">Cancel</button>
-          <button onClick={save} disabled={!t.title.trim() || !t.body.trim()} className="rounded-lg bg-ink px-6 py-3 font-semibold text-white disabled:opacity-30">Save</button>
-        </div>
-      }
-    >
-      <label className="mb-1 block text-sm font-semibold">Name</label>
-      <input value={t.title} onChange={(e) => setT({ ...t, title: e.target.value })} maxLength={120} placeholder="Wi-Fi & check-in details" className="mb-5 w-full rounded-lg border border-[#b0b0b0] px-4 py-3 outline-none focus:border-ink" />
-      <label className="mb-1 block text-sm font-semibold">When to send</label>
-      <select value={t.trigger} onChange={(e) => setT({ ...t, trigger: e.target.value as Trigger })} className="mb-5 w-full rounded-lg border border-[#b0b0b0] px-4 py-3 outline-none focus:border-ink">
-        {Object.entries(TRIGGERS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-      </select>
-      <label className="mb-1 block text-sm font-semibold">Message</label>
-      <div className="mb-2 flex flex-wrap gap-1.5">
-        {PLACEHOLDERS.map((p) => (
-          <button key={p} type="button" onClick={() => insert(p)} className="rounded-full border border-line px-2.5 py-1 text-xs hover:border-ink">
-            + {p.replace(/_/g, " ")}
-          </button>
-        ))}
-      </div>
-      <textarea ref={bodyRef} value={t.body} onChange={(e) => setT({ ...t, body: e.target.value })} rows={7} maxLength={4000} placeholder={"Hi {guest_name}! Wi-Fi: MyHome_5G / pass1234\nDirections: {maps_link}"} className="w-full rounded-lg border border-[#b0b0b0] p-4 font-mono text-sm outline-none focus:border-ink" />
-      {t.body && (
-        <div className="mt-4">
-          <div className="mb-1 text-sm font-semibold">Preview</div>
-          <p className="whitespace-pre-line rounded-2xl rounded-tl-sm bg-soft p-4 text-sm">{preview}</p>
-        </div>
-      )}
-    </Modal>
-  );
-}
-
-function MessagesTab({ listing }: { listing: ListingDetail }) {
-  const templates = useApi<Template[]>(`/listings/${listing.id}/templates`);
-  const [editing, setEditing] = useState<Template | "new" | null>(null);
-  const remove = async (id: number) => {
-    await del(`/templates/${id}`);
+  const remove = async () => {
+    try {
+      await del(`/listings/${l.id}`);
+      toast("Listing deleted");
+      await refresh();
+      router.push("/hosting/listings");
+    } catch (e) {
+      toast.error((e as Error).message);
+      setConfirmDelete(false);
+    }
+  };
+  const removeTemplate = async (t: Template) => {
+    await del(`/templates/${t.id}`);
     toast("Message deleted");
     templates.reload();
   };
-  return (
-    <div className="max-w-3xl">
-      <p className="mb-6 text-muted">
-        Scheduled messages go out automatically for every confirmed booking, so guests get Wi-Fi details, directions and check-in
-        instructions without you lifting a finger. Each message is filled in with the guest&apos;s details when they book.
-      </p>
-      <div className="space-y-3">
-        {(templates.data ?? []).map((t) => (
-          <div key={t.id} className="rounded-xl border border-line p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="font-semibold">{t.title}</div>
-                <div className="text-sm text-muted">{TRIGGERS[t.trigger]}</div>
-              </div>
-              <div className="flex gap-1">
-                <button onClick={() => setEditing(t)} aria-label="Edit" className="rounded-full p-2 hover:bg-soft"><Pencil size={16} /></button>
-                <button onClick={() => remove(t.id)} aria-label="Delete" className="rounded-full p-2 hover:bg-soft"><Trash2 size={16} /></button>
-              </div>
-            </div>
-            <p className="mt-3 line-clamp-3 whitespace-pre-line text-sm text-muted">{t.body}</p>
+
+  if (screen && draft) {
+    return (
+      <main className="mx-auto max-w-2xl px-6 pb-32 pt-6">
+        <div className="mb-6 flex items-center justify-between">
+          <button onClick={close} aria-label="Back" className="-ml-2 rounded-full p-2 hover:bg-soft"><ArrowLeft size={24} /></button>
+          {screen === "pricing" && <span className="rounded-full border border-line px-4 py-2 text-lg">INR</span>}
+        </div>
+        <h1 className="mb-8 text-[32px] font-semibold">{SCREEN_TITLES[screen]}</h1>
+        <ScreenBody screen={screen} f={draft} set={set} listing={l} />
+        {screen === "status" && (
+          <button onClick={() => setConfirmDelete(true)} className="mt-10 flex items-center gap-2 font-semibold text-[#c13515] underline">
+            <Trash2 size={18} /> Delete listing
+          </button>
+        )}
+        <div className="fixed inset-x-0 bottom-0 z-[600] border-t border-line bg-white px-6 py-4">
+          <div className="mx-auto flex max-w-2xl justify-between">
+            <button onClick={close} className="font-semibold underline">Cancel</button>
+            <button onClick={save} disabled={saving} className="rounded-lg bg-ink px-8 py-3 font-semibold text-white disabled:opacity-40">{saving ? "Saving…" : "Save"}</button>
           </div>
+        </div>
+        <Modal
+          open={confirmDelete}
+          onClose={() => setConfirmDelete(false)}
+          title="Delete listing"
+          footer={
+            <div className="flex justify-between">
+              <button onClick={() => setConfirmDelete(false)} className="font-semibold underline">Cancel</button>
+              <button onClick={remove} className="rounded-lg bg-[#c13515] px-6 py-3 font-semibold text-white">Delete</button>
+            </div>
+          }
+        >
+          <p>Permanently delete <b>{l.title}</b>? Listings with upcoming reservations can&apos;t be deleted; unlist them instead.</p>
+        </Modal>
+      </main>
+    );
+  }
+
+  const open = (s: Screen) => setScreen(s);
+  const amenityNames = l.amenities.map((a) => a.name);
+
+  return (
+    <main className="mx-auto max-w-2xl px-6 pb-36 pt-6">
+      <div className="mb-6 flex items-center justify-between">
+        <button onClick={() => router.push("/hosting/listings")} aria-label="Back" className="-ml-2 rounded-full p-2 hover:bg-soft"><ArrowLeft size={24} /></button>
+        <h1 className="text-xl font-medium">Listing editor</h1>
+        <button onClick={() => open("status")} aria-label="Listing settings" className="-mr-2 rounded-full p-2 hover:bg-soft"><Settings size={22} /></button>
+      </div>
+
+      <div className="mx-auto mb-8 flex max-w-md rounded-full bg-[#ebebeb] p-1">
+        {(["space", "arrival"] as const).map((t) => (
+          <button key={t} onClick={() => setTab(t)} className={`flex-1 rounded-full py-3 text-[15px] ${tab === t ? "bg-white font-medium shadow" : ""}`}>
+            {t === "space" ? "Your space" : "Arrival guide"}
+          </button>
         ))}
       </div>
-      <button onClick={() => setEditing("new")} className="mt-6 rounded-lg border border-ink px-5 py-3 font-semibold hover:bg-soft">+ Add scheduled message</button>
+
+      {tab === "space" ? (
+        <div className="space-y-5">
+          <button onClick={() => open("status")} className="flex w-full items-center gap-3 rounded-3xl bg-[#f7f7f7] p-7 text-left">
+            <span className="flex-1">
+              <span className="flex items-center gap-2 text-[17px] font-medium">
+                <span className={`h-2.5 w-2.5 rounded-full ${l.is_listed ? "bg-[#008a05]" : "bg-[#8a8a8a]"}`} />
+                {l.is_listed ? "Listed" : "Unlisted"}
+              </span>
+              <span className="mt-1 block text-muted">
+                {l.is_listed ? "Guests can find and book your listing." : "Your listing doesn't appear in search results and can't be booked. Relist to start earning."}
+              </span>
+            </span>
+            <ChevronRight size={22} />
+          </button>
+          <Card title="Photo tour" onClick={() => open("photos")}>
+            {plural(l.bedrooms, "bedroom")} · {plural(l.beds, "bed")} · {plural(l.baths, "bath")}
+            <PhotoFan urls={l.photos.map((p) => p.url)} />
+          </Card>
+          <Card title="Title" onClick={() => open("title")}><span className="text-[26px] font-medium">{l.title}</span></Card>
+          <Card title="Property type" onClick={() => open("type")}>Entire place · {l.property_type}</Card>
+          <Card title="Description" onClick={() => open("description")}><span className="line-clamp-3">{l.description}</span></Card>
+          <Card title="Rooms and guests" onClick={() => open("rooms")}>{plural(l.max_guests, "guest")} · {plural(l.bedrooms, "bedroom")} · {plural(l.beds, "bed")} · {plural(l.baths, "bathroom")}</Card>
+          <Card title="Location" onClick={() => open("location")}>{l.address || `${l.city}, ${l.state}`}</Card>
+          <Card title="Amenities" onClick={() => open("amenities")}>
+            {amenityNames.slice(0, 4).join(" · ")}{amenityNames.length > 4 && ` · +${amenityNames.length - 4} more`}
+          </Card>
+          <Card title="Pricing" onClick={() => open("pricing")}>
+            {money(l.base_price)} per night
+            {l.weekend_price && <span className="block">{money(l.weekend_price)} Fri & Sat</span>}
+            {l.cleaning_fee > 0 && <span className="block">{money(l.cleaning_fee)} cleaning fee</span>}
+          </Card>
+          <Card title="Discounts" onClick={() => open("discounts")}>
+            {l.weekly_discount_pct || l.monthly_discount_pct ? (
+              <>
+                {l.weekly_discount_pct > 0 && <span className="block">{l.weekly_discount_pct}% weekly discount</span>}
+                {l.monthly_discount_pct > 0 && <span className="block">{l.monthly_discount_pct}% monthly discount</span>}
+              </>
+            ) : "No discounts"}
+          </Card>
+          <Card title="Availability" onClick={() => open("availability")}>
+            <span className="block">{l.min_nights}–{l.max_nights} night stays</span>
+            <span className="block">{noticeLabel(l.advance_notice_days)} advance notice</span>
+          </Card>
+          <Link href={`/hosting/calendar/${l.id}`} className="flex items-center gap-4 rounded-3xl bg-white p-7 shadow-[0_2px_12px_rgba(0,0,0,0.08)]">
+            <CalendarDays size={24} strokeWidth={1.5} /> <span className="flex-1 text-[17px] font-medium">Calendar</span> <ChevronRight size={22} />
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          <Card title="Check-in and checkout" onClick={() => open("times")}>
+            Check-in after {time12(l.check_in_time)} · Checkout before {time12(l.check_out_time)}
+          </Card>
+          <Card title="Directions" onClick={() => open("location")}>
+            {l.address || `${l.city}, ${l.state}`}
+            <span className="mt-1 block text-sm">Guests get the exact address and a Maps link after booking.</span>
+          </Card>
+          <div className="rounded-3xl bg-white p-7 shadow-[0_2px_12px_rgba(0,0,0,0.08)]">
+            <div className="text-[17px] font-medium">Scheduled messages</div>
+            <p className="mb-4 text-muted">Wi-Fi details, door codes and directions, sent automatically for every booking.</p>
+            {(templates.data ?? []).map((t) => (
+              <div key={t.id} className="flex items-center gap-3 border-t border-line py-4">
+                <button onClick={() => setEditing(t)} className="flex-1 text-left">
+                  <span className="block font-medium">{t.title}</span>
+                  <span className="text-sm text-muted">{TRIGGERS[t.trigger]}</span>
+                </button>
+                <button onClick={() => removeTemplate(t)} aria-label={`Delete ${t.title}`} className="rounded-full p-2 hover:bg-soft"><Trash2 size={18} /></button>
+              </div>
+            ))}
+            <button onClick={() => setEditing("new")} className="mt-2 flex items-center gap-2 rounded-full border border-ink px-5 py-2.5 text-sm font-semibold hover:bg-soft">
+              <Plus size={16} /> Add message
+            </button>
+          </div>
+        </div>
+      )}
+
+      <Link href={`/rooms/${l.id}`} className="fixed bottom-8 left-1/2 z-[450] flex -translate-x-1/2 items-center gap-2 rounded-full bg-black px-7 py-4 text-lg font-semibold text-white shadow-card">
+        <Eye size={22} /> View
+      </Link>
+
       {editing && (
         <TemplateEditor
-          listing={listing}
+          listing={l}
           initial={editing === "new" ? undefined : editing}
           onClose={() => setEditing(null)}
           onSaved={() => {
@@ -219,47 +360,14 @@ function MessagesTab({ listing }: { listing: ListingDetail }) {
           }}
         />
       )}
-    </div>
+    </main>
   );
 }
 
-export default function ManageListing() {
-  const { id } = useParams<{ id: string }>();
-  const { user } = useUser();
-  const { data: listing, error } = useApi<ListingDetail>(`/listings/${id}`);
-  const { data: bookings } = useApi<Booking[]>(user ? "/host/bookings" : null);
-  const [tab, setTab] = useState<"calendar" | "messages">("calendar");
-
-  if (error) return <p className="p-20 text-center">{error}</p>;
-  if (!listing) return <div className="mx-auto mt-10 h-96 max-w-[1280px] animate-pulse rounded-xl bg-soft" />;
-  if (user?.id !== listing.host.id) return <p className="p-20 text-center">Only the host can manage this listing.</p>;
-
-  const today = toISO(new Date());
-  const upcoming = (bookings ?? []).filter((b) => b.listing.id === listing.id && b.status === "confirmed" && b.check_out > today);
-
+export default function ListingEditorPage() {
   return (
-    <main className="mx-auto max-w-[1280px] px-6 py-10 xl:px-20">
-      <Link href="/hosting" className="mb-6 flex items-center gap-2 text-sm font-semibold hover:underline"><ArrowLeft size={16} /> Listings</Link>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-[28px] font-semibold">{listing.title}</h1>
-          <p className="text-muted">
-            {listing.city}, {listing.state} · Check-in {time12(listing.check_in_time)} · Min {listing.min_nights} night(s)
-          </p>
-        </div>
-        <div className="flex gap-3 text-sm font-semibold">
-          <Link href={`/rooms/${listing.id}`} className="rounded-lg border border-line px-4 py-2 hover:border-ink">View listing</Link>
-          <Link href={`/hosting/listings/${listing.id}/edit`} className="rounded-lg border border-line px-4 py-2 hover:border-ink">Edit details</Link>
-        </div>
-      </div>
-      <div className="mb-8 flex gap-6 border-b border-line">
-        {(["calendar", "messages"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`-mb-px border-b-2 pb-3 font-semibold ${tab === t ? "border-ink" : "border-transparent text-muted"}`}>
-            {t === "calendar" ? "Calendar" : "Scheduled messages"}
-          </button>
-        ))}
-      </div>
-      {tab === "calendar" ? <CalendarTab listingId={listing.id} bookings={upcoming} /> : <MessagesTab listing={listing} />}
-    </main>
+    <Suspense>
+      <Editor />
+    </Suspense>
   );
 }

@@ -62,9 +62,8 @@ body {
 .rdp-disabled .rdp-day_button { color: #b0b0b0; text-decoration: line-through; font-weight: 400; }
 .rdp-chevron { fill: #222222; width: 16px; height: 16px; }
 
-/* Host calendar: show bookings vs host blocks */
-.cal-booked .rdp-day_button { background: #fdecef; color: #c13515; text-decoration: none !important; }
-.cal-blocked .rdp-day_button { background: repeating-linear-gradient(45deg, #f2f2f2, #f2f2f2 4px, #e4e4e4 4px, #e4e4e4 8px); color: #6a6a6a; text-decoration: none !important; }
+/* Host price calendar: nights the host blocked */
+.cal-blocked-cell { background: repeating-linear-gradient(45deg, #f7f7f7, #f7f7f7 5px, #ebebeb 5px, #ebebeb 10px); color: #6a6a6a; }
 
 /* Leaflet price pins */
 .price-pin {
