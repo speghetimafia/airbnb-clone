@@ -20,6 +20,8 @@ class UserDetail(UserOut):
     bio: str
     joined_at: datetime
     is_host: bool = False
+    trip_count: int = 0  # completed stays; only filled by /me
+    review_count: int = 0  # reviews written; only filled by /me
 
 
 class AmenityOut(ORM):
@@ -47,6 +49,7 @@ class ListingCard(BaseModel):
     rating: float | None
     review_count: int
     host_is_superhost: bool
+    is_listed: bool = True
     stay_total: int | None = None  # full price incl. fees, only when searching with dates
 
 
@@ -82,6 +85,9 @@ class ListingDetail(ORM):
     max_nights: int
     check_in_time: str
     check_out_time: str
+    advance_notice_days: int
+    availability_window_days: int
+    is_listed: bool
     created_at: datetime
     host: UserDetail
     photos: list[PhotoOut]
@@ -113,9 +119,12 @@ class ListingIn(BaseModel):
     weekly_discount_pct: int = Field(default=0, ge=0, le=90)
     monthly_discount_pct: int = Field(default=0, ge=0, le=90)
     min_nights: int = Field(default=1, ge=1, le=365)
-    max_nights: int = Field(default=30, ge=1, le=365)
+    max_nights: int = Field(default=30, ge=1, le=1125)
     check_in_time: str = Field(default="14:00", pattern=TIME)
     check_out_time: str = Field(default="11:00", pattern=TIME)
+    advance_notice_days: int = Field(default=0, ge=0, le=7)
+    availability_window_days: int = Field(default=365, ge=30, le=730)
+    is_listed: bool = True
     photo_urls: list[str] = Field(min_length=1, max_length=30)
     amenity_ids: list[int] = []
 
@@ -195,6 +204,9 @@ class ListingMini(ORM):
     property_type: str
     check_in_time: str
     check_out_time: str
+    address: str
+    lat: float
+    lng: float
     host: UserOut
     photos: list[PhotoOut]
 
@@ -222,6 +234,13 @@ class MessageOut(ORM):
     title: str
     body: str
     send_at: datetime
+
+
+class Thread(BaseModel):
+    """One booking's conversation in the inbox: the latest due message and how many there are."""
+    booking: BookingOut
+    last: MessageOut
+    count: int
 
 
 class ReviewIn(BaseModel):

@@ -36,7 +36,7 @@ def to_card(listing: Listing, rating, review_count) -> ListingCard:
         property_type=listing.property_type, category=listing.category, lat=listing.lat, lng=listing.lng,
         base_price=listing.base_price, photos=[p.url for p in listing.photos[:5]],
         rating=round(rating, 2) if rating else None, review_count=review_count or 0,
-        host_is_superhost=listing.host.is_superhost,
+        host_is_superhost=listing.host.is_superhost, is_listed=listing.is_listed,
     )
 
 
@@ -65,7 +65,8 @@ def search(
     page_size: int = Query(20, ge=1, le=48),
 ):
     q = card_query()
-    filters = [Listing.max_guests >= guests, Listing.bedrooms >= bedrooms, Listing.beds >= beds]
+    today = date.today()
+    filters = [Listing.is_listed, Listing.max_guests >= guests, Listing.bedrooms >= bedrooms, Listing.beds >= beds]
     if location:
         like = f"%{location.strip()}%"
         filters.append(or_(Listing.city.ilike(like), Listing.state.ilike(like), Listing.title.ilike(like)))
@@ -77,6 +78,8 @@ def search(
             ~rules.unavailable_exists(Listing.id, check_in, check_out),
             Listing.min_nights <= nights,
             Listing.max_nights >= nights,
+            Listing.advance_notice_days <= (check_in - today).days,
+            Listing.availability_window_days >= (check_out - today).days,
         ]
     if category:
         filters.append(Listing.category == category)
