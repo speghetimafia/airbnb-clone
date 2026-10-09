@@ -56,8 +56,12 @@ export const post = <T>(path: string, body?: unknown) =>
 export const put = <T>(path: string, body: unknown) => api<T>(path, { method: "PUT", body: JSON.stringify(body) });
 export const del = (path: string) => api<void>(path, { method: "DELETE" });
 
-/** Uploaded photos come back as /uploads/x.jpg on the API host. */
-export const img = (url: string) => (url.startsWith("/uploads/") ? `${API_URL}${url}` : url);
+/** Uploaded photos come back as /uploads/x.jpg on the API host. Unsplash photos can be resized via ?w=. */
+export function img(url: string, width?: number) {
+  if (url.startsWith("/uploads/")) return `${API_URL}${url}`;
+  if (width && url.includes("images.unsplash.com")) return url.replace(/([?&])w=\d+/, `$1w=${width}`);
+  return url;
+}
 
 export function qs(params: Record<string, string | number | null | undefined>) {
   const p = new URLSearchParams();

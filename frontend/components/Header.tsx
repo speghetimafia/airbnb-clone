@@ -158,7 +158,7 @@ export default function Header() {
 
   return (
     <>
-      <header className={`sticky top-0 z-[500] border-b border-line bg-white ${expanded ? "pb-5" : ""}`}>
+      <header className={`sticky top-0 z-[500] border-b border-line bg-white ${expanded ? "md:pb-5" : ""}`}>
         {/* Desktop */}
         <div className={`mx-auto hidden h-20 items-center justify-between px-6 md:flex xl:px-20 ${narrow ? "max-w-[1280px]" : ""}`}>
           <div className="flex-1">

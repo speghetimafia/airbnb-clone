@@ -131,7 +131,7 @@ function TripCard({ b, onChange }: { b: Booking; onChange: () => void }) {
     <div className="flex flex-col overflow-hidden rounded-2xl border border-line shadow-sm sm:flex-row">
       <Link href={`/rooms/${b.listing.id}`} className="sm:w-64">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={img(b.listing.photos[0]?.url)} alt="" className="h-48 w-full object-cover sm:h-full" />
+        <img src={img(b.listing.photos[0]?.url, 600)} alt="" className="h-48 w-full object-cover sm:h-full" />
       </Link>
       <div className="flex flex-1 flex-col p-6">
         <div className="flex items-start justify-between gap-4">

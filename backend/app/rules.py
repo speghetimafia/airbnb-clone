@@ -86,10 +86,17 @@ def stay_error(listing: Listing, check_in: date, check_out: date, guests: int, t
 
 def _send_at(trigger: str, booking: Booking, now: datetime) -> datetime:
     if trigger == "day_before_checkin":
-        return datetime.combine(booking.check_in - timedelta(days=1), time(9))
-    if trigger == "on_checkout":
-        return datetime.combine(booking.check_out, time(9))
-    return now
+        at = datetime.combine(booking.check_in - timedelta(days=1), time(9))
+    elif trigger == "on_checkout":
+        at = datetime.combine(booking.check_out, time(9))
+    else:
+        return now
+    # Last-minute bookings: a schedule that already passed goes out right after the confirmation.
+    return max(at, now + timedelta(seconds=1))
+
+
+def _time12(hhmm: str) -> str:
+    return datetime.strptime(hhmm, "%H:%M").strftime("%-I:%M %p")
 
 
 def render_messages(booking: Booking, listing: Listing, guest_name: str, now: datetime) -> list[Message]:
@@ -100,8 +107,8 @@ def render_messages(booking: Booking, listing: Listing, guest_name: str, now: da
         "listing_title": listing.title,
         "check_in": booking.check_in.strftime("%a, %d %b %Y"),
         "check_out": booking.check_out.strftime("%a, %d %b %Y"),
-        "check_in_time": listing.check_in_time,
-        "check_out_time": listing.check_out_time,
+        "check_in_time": _time12(listing.check_in_time),
+        "check_out_time": _time12(listing.check_out_time),
         "address": listing.address or f"{listing.city}, {listing.state}",
         "maps_link": f"https://maps.google.com/?q={listing.lat},{listing.lng}",
     }
