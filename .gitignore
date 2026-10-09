@@ -1,0 +1,11 @@
+.claude/
+node_modules/
+.next/
+__pycache__/
+.venv/
+*.db
+uploads/
+.env*
+!.env.example
+.DS_Store
+.pytest_cache/
