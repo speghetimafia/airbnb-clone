@@ -14,7 +14,8 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    // Browser extensions (e.g. QuillBot) add attributes to <html> before hydration; ignore those here only.
+    <html lang="en" suppressHydrationWarning>
       <body className="pb-16 md:pb-0">
         <UserProvider>
           <Suspense fallback={<div className="h-20 border-b border-line" />}>
