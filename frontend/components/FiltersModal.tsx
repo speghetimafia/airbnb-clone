@@ -16,7 +16,7 @@ export type Filters = {
   amenities: number[];
 };
 
-export const EMPTY_FILTERS: Filters = { min_price: "", max_price: "", property_type: [], bedrooms: 0, beds: 0, amenities: [] };
+const EMPTY_FILTERS: Filters = { min_price: "", max_price: "", property_type: [], bedrooms: 0, beds: 0, amenities: [] };
 
 export const countFilters = (f: Filters) =>
   (f.min_price || f.max_price ? 1 : 0) + f.property_type.length + (f.bedrooms ? 1 : 0) + (f.beds ? 1 : 0) + f.amenities.length;

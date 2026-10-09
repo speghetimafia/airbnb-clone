@@ -10,18 +10,14 @@ from .models import Listing, User
 DB = Annotated[Session, Depends(get_db)]
 
 
-def optional_user(db: DB, x_user_id: Annotated[int | None, Header()] = None) -> User | None:
-    return db.get(User, x_user_id) if x_user_id else None
-
-
-def current_user(user: Annotated[User | None, Depends(optional_user)]) -> User:
+def current_user(db: DB, x_user_id: Annotated[int | None, Header()] = None) -> User:
+    user = db.get(User, x_user_id) if x_user_id else None
     if not user:
         raise HTTPException(401, "Log in to continue")
     return user
 
 
 CurrentUser = Annotated[User, Depends(current_user)]
-OptionalUser = Annotated[User | None, Depends(optional_user)]
 
 
 def get_listing(db: Session, listing_id: int) -> Listing:

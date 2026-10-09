@@ -58,7 +58,7 @@ Prerequisites: Python 3.12+ and Node 20+.
 # Backend: http://localhost:8000 (Swagger at /docs)
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # app + test tools (production installs requirements.txt only)
 python -m app.seed            # creates data/airbnb.db with demo data (re-run to reset)
 uvicorn app.main:app --reload --port 8000
 ```
