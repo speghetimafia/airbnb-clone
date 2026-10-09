@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import LoginPrompt from "@/components/LoginPrompt";
 import { img } from "@/lib/api";
+import { clearDraft, useDraft } from "@/lib/draft";
 import type { ListingCard } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
 import { useUser } from "@/lib/user";
@@ -21,6 +22,7 @@ export default function YourListings() {
   const [grid, setGrid] = useState(false);
   const [searching, setSearching] = useState(false);
   const [q, setQ] = useState("");
+  const draft = useDraft();
 
   if (!ready) return null;
   if (!user) return <LoginPrompt title="Listings" text="Log in to manage your listings." />;
@@ -45,6 +47,27 @@ export default function YourListings() {
       <h1 className="mb-6 text-[32px] font-semibold">Your listings</h1>
       {searching && (
         <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by title or city" className="mb-6 w-full rounded-full border border-line px-5 py-3 outline-none focus:border-ink" />
+      )}
+
+      {draft && (
+        <section className="mt-10">
+          <h2 className="mb-5 text-xl font-medium">In progress</h2>
+          <div className="flex items-center gap-6">
+            <Link href="/hosting/listings/new" className="flex min-w-0 flex-1 items-center gap-6">
+              {draft.f.photo_urls[0] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={img(draft.f.photo_urls[0], 300)} alt="" className="h-[84px] w-[84px] shrink-0 rounded-2xl object-cover" />
+              ) : (
+                <span className="flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-2xl bg-soft text-4xl">🏠</span>
+              )}
+              <span className="min-w-0">
+                <span className="block truncate text-[17px] font-medium">{draft.f.title || `Your ${draft.f.property_type.toLowerCase()} listing`}</span>
+                <span className="block text-muted">Edited {new Date(draft.updatedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} · Continue</span>
+              </span>
+            </Link>
+            <button onClick={clearDraft} className="text-sm font-semibold underline">Discard</button>
+          </div>
+        </section>
       )}
 
       {loading && !data && <div className="h-40 animate-pulse rounded-2xl bg-soft" />}

@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 type Props = {
   open: boolean;
@@ -10,33 +10,47 @@ type Props = {
   children: React.ReactNode;
   footer?: React.ReactNode;
   size?: "md" | "lg" | "full";
+  /** Shown above the footer. Use this instead of toasts while open: dialogs sit in the browser's top layer, above toasts. */
+  error?: string | null;
 };
 
-/** Airbnb-style centered sheet: title bar with X on the left, scrollable body, optional sticky footer. */
-export default function Modal({ open, onClose, title, children, footer, size = "md" }: Props) {
+/**
+ * Airbnb-style sheet on the native <dialog>: the browser traps focus, makes the page behind inert,
+ * handles Esc, and restores focus to the opener on close. Bottom sheet on phones, centered on desktop.
+ */
+export default function Modal({ open, onClose, title, children, footer, size = "md", error }: Props) {
+  const ref = useRef<HTMLDialogElement>(null);
+
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
+    const dialog = ref.current;
+    if (!open || !dialog) return;
+    const opener = document.activeElement as HTMLElement | null;
+    dialog.showModal();
     return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
+      dialog.close();
+      opener?.focus(); // React may detach the dialog first, which skips the browser's own focus restore
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
-  const width = size === "full" ? "h-full w-full" : size === "lg" ? "md:max-w-3xl" : "md:max-w-xl";
+  const width = size === "full" ? "" : size === "lg" ? "md:max-w-3xl" : "md:max-w-xl";
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/50 md:items-center" onClick={onClose}>
+    <dialog
+      ref={ref}
+      aria-label={title}
+      onCancel={(e) => {
+        e.preventDefault(); // Esc: let React state close it so open/closed never disagree
+        onClose();
+      }}
+      onClick={(e) => e.target === ref.current && onClose()} // click on the backdrop
+      className={`m-0 mt-auto w-full max-w-none overflow-hidden bg-transparent p-0 backdrop:bg-black/50 md:m-auto ${
+        size === "full" ? "h-full max-h-none md:m-0" : "max-h-[92vh]"
+      } ${width}`}
+    >
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
-        className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl md:rounded-2xl ${width} ${
-          size === "full" ? "!max-h-none !h-full !rounded-none" : ""
+        className={`flex max-h-[inherit] w-full flex-col overflow-hidden bg-white shadow-2xl ${
+          size === "full" ? "h-full" : "rounded-t-3xl md:rounded-2xl"
         } animate-[slideUpMobile_.25s_ease-out] md:animate-[slideUpDesktop_.2s_ease-out]`}
       >
         {size !== "full" && <div className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-[#dddddd] md:hidden" />}
@@ -47,12 +61,9 @@ export default function Modal({ open, onClose, title, children, footer, size = "
           {title && <h2 className="text-base font-bold">{title}</h2>}
         </div>
         <div className="flex-1 overflow-y-auto p-6">{children}</div>
+        {error && <p role="alert" className="mx-6 mb-3 rounded-xl bg-[#fff8f6] px-4 py-3 text-sm text-[#c13515]">{error}</p>}
         {footer && <div className="shrink-0 border-t border-line px-6 py-4">{footer}</div>}
       </div>
-      <style>{`
-        @keyframes slideUpMobile { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        @keyframes slideUpDesktop { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-      `}</style>
-    </div>
+    </dialog>
   );
 }

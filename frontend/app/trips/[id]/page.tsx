@@ -24,6 +24,7 @@ function ReviewModal({ booking, onClose, onDone }: { booking: Booking; onClose: 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const submit = async () => {
     setSaving(true);
     try {
@@ -31,7 +32,7 @@ function ReviewModal({ booking, onClose, onDone }: { booking: Booking; onClose: 
       toast.success("Thanks for your review!");
       onDone();
     } catch (e) {
-      toast.error((e as Error).message);
+      setError((e as Error).message);
       setSaving(false);
     }
   };
@@ -40,6 +41,7 @@ function ReviewModal({ booking, onClose, onDone }: { booking: Booking; onClose: 
       open
       onClose={onClose}
       title="Write a review"
+      error={error}
       footer={
         <button onClick={submit} disabled={!rating || comment.trim().length < 3 || saving} className="btn-brand w-full py-3">
           {saving ? "Submitting…" : "Submit review"}
@@ -93,6 +95,7 @@ export default function TripDetail() {
   const { data: messages } = useApi<Message[]>(user ? `/bookings/${id}/messages` : null);
   const [review, setReview] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   if (ready && !user) return <LoginPrompt title="Trips" text="Log in to see this reservation." />;
   if (error) return <p className="p-20 text-center">{error}</p>;
@@ -110,7 +113,7 @@ export default function TripDetail() {
       setConfirmCancel(false);
       reload();
     } catch (e) {
-      toast.error((e as Error).message);
+      setCancelError((e as Error).message);
     }
   };
   const section = "border-t border-line py-8";
@@ -199,8 +202,12 @@ export default function TripDetail() {
       {review && <ReviewModal booking={b} onClose={() => setReview(false)} onDone={() => { setReview(false); reload(); }} />}
       <Modal
         open={confirmCancel}
-        onClose={() => setConfirmCancel(false)}
+        onClose={() => {
+          setConfirmCancel(false);
+          setCancelError(null);
+        }}
         title="Cancel reservation"
+        error={cancelError}
         footer={
           <div className="flex justify-between">
             <button onClick={() => setConfirmCancel(false)} className="font-semibold underline">Keep reservation</button>

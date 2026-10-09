@@ -7,7 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import BookingCard from "@/components/BookingCard";
 import { Avatar } from "@/components/Header";
-import { AmenityIcon } from "@/components/icons";
+import { AmenityIcon, CATEGORIES } from "@/components/icons";
 import { HeartButton } from "@/components/ListingCard";
 import Modal from "@/components/Modal";
 import RangeCalendar from "@/components/RangeCalendar";
@@ -193,6 +193,7 @@ function Room() {
   const l = listing;
   const host = l.host;
   const isOwner = user?.id === host.id;
+  const category = CATEGORIES.find((c) => c.name === l.category);
   const setDates = (a: string | null, b: string | null) => {
     setCheckIn(a);
     setCheckOut(b);
@@ -255,6 +256,15 @@ function Room() {
           </section>
 
           <section className="space-y-6 border-b border-line py-8">
+            {category && (
+              <div className="flex gap-6">
+                <category.icon size={24} strokeWidth={1.5} className="shrink-0" />
+                <div>
+                  <div className="font-semibold">{category.title}</div>
+                  <div className="text-sm text-muted">{category.blurb}</div>
+                </div>
+              </div>
+            )}
             {host.is_superhost && (
               <div className="flex gap-6">
                 <Medal size={24} strokeWidth={1.5} />

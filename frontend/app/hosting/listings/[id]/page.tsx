@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   AmenitiesField, DiscountFields, type Fields, LocationFields, NOTICE_OPTIONS, PhotosField, RoomsFields, TimesFields, TypeFields,
   WINDOW_OPTIONS, inputCls, noticeLabel, toInput, windowLabel,
-} from "@/components/ListingForm";
+} from "@/components/ListingFields";
 import LoginPrompt from "@/components/LoginPrompt";
 import Modal from "@/components/Modal";
 import TemplateEditor, { TRIGGERS } from "@/components/TemplateEditor";
@@ -169,6 +169,7 @@ function Editor() {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<Template | "new" | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Opening a screen (also via ?edit=pricing) starts a fresh draft from the saved listing.
   if (screen && l && !draft) setDraft(toInput(l));
@@ -204,8 +205,7 @@ function Editor() {
       await refresh();
       router.push("/hosting/listings");
     } catch (e) {
-      toast.error((e as Error).message);
-      setConfirmDelete(false);
+      setDeleteError((e as Error).message);
     }
   };
   const removeTemplate = async (t: Template) => {
@@ -236,8 +236,12 @@ function Editor() {
         </div>
         <Modal
           open={confirmDelete}
-          onClose={() => setConfirmDelete(false)}
+          onClose={() => {
+            setConfirmDelete(false);
+            setDeleteError(null);
+          }}
           title="Delete listing"
+          error={deleteError}
           footer={
             <div className="flex justify-between">
               <button onClick={() => setConfirmDelete(false)} className="font-semibold underline">Cancel</button>

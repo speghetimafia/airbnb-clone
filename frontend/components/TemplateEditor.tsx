@@ -18,6 +18,7 @@ const PLACEHOLDERS = ["guest_name", "host_name", "listing_title", "check_in", "c
 export default function TemplateEditor({ listing, initial, onClose, onSaved }: { listing: ListingDetail; initial?: Template; onClose: () => void; onSaved: () => void }) {
   const [t, setT] = useState({ title: initial?.title ?? "", body: initial?.body ?? "", trigger: initial?.trigger ?? ("on_confirm" as Trigger) });
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const insert = (ph: string) => {
     const el = bodyRef.current;
@@ -41,7 +42,7 @@ export default function TemplateEditor({ listing, initial, onClose, onSaved }: {
       toast.success("Message saved");
       onSaved();
     } catch (e) {
-      toast.error((e as Error).message);
+      setError((e as Error).message);
     }
   };
 
@@ -51,6 +52,7 @@ export default function TemplateEditor({ listing, initial, onClose, onSaved }: {
       onClose={onClose}
       size="lg"
       title={initial ? "Edit scheduled message" : "New scheduled message"}
+      error={error}
       footer={
         <div className="flex justify-between">
           <button onClick={onClose} className="font-semibold underline">Cancel</button>
