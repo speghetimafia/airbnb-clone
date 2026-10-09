@@ -4,6 +4,7 @@ import { addDays, startOfDay } from "date-fns";
 import { DayPicker, type DateRange, type Matcher } from "react-day-picker";
 import { fromISO, toISO } from "@/lib/format";
 import type { Range } from "@/lib/types";
+import { useIsMobile } from "@/lib/useIsMobile";
 
 type Props = {
   checkIn: string | null;
@@ -19,6 +20,7 @@ type Props = {
  * and as a new check-in, so we disable start..end-1 only.
  */
 export default function RangeCalendar({ checkIn, checkOut, onChange, unavailable = [], minNights = 1, months = 2 }: Props) {
+  const isMobile = useIsMobile();
   const today = startOfDay(new Date());
   const from = checkIn ? fromISO(checkIn) : undefined;
   const to = checkOut ? fromISO(checkOut) : undefined;
@@ -46,12 +48,9 @@ export default function RangeCalendar({ checkIn, checkOut, onChange, unavailable
       selected={{ from, to }}
       onSelect={select}
       disabled={disabled}
-      numberOfMonths={months}
+      numberOfMonths={isMobile ? 1 : months}
       defaultMonth={from ?? today}
       startMonth={today}
-      weekStartsOn={0}
-      excludeDisabled={false}
-      showOutsideDays={false}
     />
   );
 }

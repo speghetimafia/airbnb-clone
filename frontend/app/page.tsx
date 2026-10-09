@@ -120,8 +120,8 @@ function Explore() {
   return (
     <>
       {/* Category row */}
-      <div className="sticky top-[71px] z-[300] bg-white pt-3 shadow-[0_1px_0_#ebebeb] md:top-20">
-        <div className="mx-auto flex max-w-[1760px] items-center gap-6 px-6 xl:px-20">
+      <div className="sticky top-[58px] z-[300] bg-white pt-2.5 shadow-[0_1px_0_#ebebeb] md:top-20 md:pt-3">
+        <div className="mx-auto flex max-w-[1760px] items-center gap-4 px-4 md:gap-6 md:px-6 xl:px-20">
           <div className="no-scrollbar flex flex-1 gap-8 overflow-x-auto">
             {CATEGORIES.map(({ name, icon: Icon }) => {
               const active = category === name;
@@ -196,7 +196,7 @@ function Explore() {
         {showMap ? <>Show list <List size={16} /></> : <>Show map <MapIcon size={16} /></>}
       </button>
 
-      {filtersOpen && <FiltersModal open onClose={() => setFiltersOpen(false)} value={filters} onApply={applyFilters} />}
+      {filtersOpen && <FiltersModal onClose={() => setFiltersOpen(false)} value={filters} onApply={applyFilters} />}
       {!showMap && <Footer />}
     </>
   );

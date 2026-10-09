@@ -2,7 +2,7 @@
 
 import { ChevronDown, ChevronUp, Flag } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { ApiError, api, qs } from "@/lib/api";
+import { api, qs } from "@/lib/api";
 import { money, plural, shortDate } from "@/lib/format";
 import type { ListingDetail, Quote, Range } from "@/lib/types";
 import Counter from "./Counter";
@@ -48,12 +48,13 @@ type Props = {
   checkIn: string | null;
   checkOut: string | null;
   guests: number;
+  isHost?: boolean;
   onDates: (a: string | null, b: string | null) => void;
   onGuests: (n: number) => void;
   onReserve: () => void;
 };
 
-export default function BookingCard({ listing, unavailable, checkIn, checkOut, guests, onDates, onGuests, onReserve }: Props) {
+export default function BookingCard({ listing, unavailable, checkIn, checkOut, guests, isHost, onDates, onGuests, onReserve }: Props) {
   const quoteKey = checkIn && checkOut ? `${checkIn}|${checkOut}|${guests}` : "";
   const [result, setResult] = useState<{ key: string; quote?: Quote; error?: string }>({ key: "" });
   const current = quoteKey && result.key === quoteKey ? result : null; // ignore answers for older dates
@@ -67,7 +68,7 @@ export default function BookingCard({ listing, unavailable, checkIn, checkOut, g
     const key = `${checkIn}|${checkOut}|${guests}`;
     api<Quote>(`/listings/${listing.id}/quote?${qs({ check_in: checkIn, check_out: checkOut, guests })}`)
       .then((q) => setResult({ key, quote: q }))
-      .catch((e: ApiError) => setResult({ key, error: e.message }));
+      .catch((e: Error) => setResult({ key, error: e.message }));
   }, [listing.id, checkIn, checkOut, guests]);
 
   useEffect(() => {
@@ -144,10 +145,10 @@ export default function BookingCard({ listing, unavailable, checkIn, checkOut, g
 
       <button
         onClick={() => (checkIn && checkOut ? onReserve() : setPanel("dates"))}
-        disabled={!!error}
-        className="btn-brand mt-4 w-full py-3.5 text-base"
+        disabled={!!error || isHost}
+        className="btn-brand mt-4 w-full py-3.5 text-base disabled:opacity-50"
       >
-        {checkIn && checkOut ? "Reserve" : "Check availability"}
+        {isHost ? "You own this listing" : checkIn && checkOut ? "Reserve" : "Check availability"}
       </button>
 
       {quote && (

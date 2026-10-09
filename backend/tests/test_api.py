@@ -130,8 +130,11 @@ def test_listing_crud_and_ownership():
     assert client.put(f"/api/listings/{lid}", json=upd, headers=GUEST).status_code == 403
     r = client.put(f"/api/listings/{lid}", json=upd, headers=HOST)
     assert r.status_code == 200 and r.json()["base_price"] == 1500 and len(r.json()["photos"]) == 2
-    client.post("/api/bookings", json={"listing_id": lid, "check_in": D(3), "check_out": D(5), "guests": 1}, headers=GUEST)
+    b = client.post("/api/bookings", json={"listing_id": lid, "check_in": D(3), "check_out": D(5), "guests": 1}, headers=GUEST).json()
     assert client.delete(f"/api/listings/{lid}", headers=HOST).status_code == 409  # upcoming reservation
+    client.post(f"/api/bookings/{b['id']}/cancel", headers=GUEST)
+    assert client.delete(f"/api/listings/{lid}", headers=HOST).status_code == 204
+    assert b["id"] not in [t["id"] for t in client.get("/api/bookings/me", headers=GUEST).json()]  # DB cascade
     other = new_listing()["id"]
     assert client.delete(f"/api/listings/{other}", headers=HOST).status_code == 204
     assert client.get(f"/api/listings/{other}").status_code == 404

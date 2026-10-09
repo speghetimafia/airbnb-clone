@@ -2,10 +2,10 @@
 
 import { ChevronLeft, ChevronRight, Heart, Star } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 import { img } from "@/lib/api";
 import { money, nightsBetween } from "@/lib/format";
 import type { ListingCard as Card } from "@/lib/types";
+import { useSnapIndex } from "@/lib/useSnapIndex";
 import { useUser } from "@/lib/user";
 
 export function HeartButton({ id, className = "" }: { id: number; className?: string }) {
@@ -29,21 +29,21 @@ export function HeartButton({ id, className = "" }: { id: number; className?: st
 type Props = { listing: Card; checkIn?: string | null; checkOut?: string | null; onHover?: (id: number | null) => void };
 
 export default function ListingCard({ listing: l, checkIn, checkOut, onHover }: Props) {
-  const [i, setI] = useState(0);
+  const { ref, index: i, onScroll, go } = useSnapIndex();
   const nights = checkIn && checkOut ? nightsBetween(checkIn, checkOut) : 0;
   const href = `/rooms/${l.id}${checkIn && checkOut ? `?check_in=${checkIn}&check_out=${checkOut}` : ""}`;
   const step = (d: number) => (e: React.MouseEvent) => {
     e.preventDefault();
-    setI((i + d + l.photos.length) % l.photos.length);
+    go(d);
   };
 
   return (
     <Link href={href} className="group block" onMouseEnter={() => onHover?.(l.id)} onMouseLeave={() => onHover?.(null)}>
       <div className="relative aspect-[20/19] overflow-hidden rounded-xl bg-soft">
-        <div className="flex h-full transition-transform duration-300" style={{ transform: `translateX(-${i * 100}%)` }}>
+        <div ref={ref} onScroll={onScroll} className="no-scrollbar flex h-full snap-x snap-mandatory overflow-x-auto">
           {l.photos.map((p, n) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={n} src={img(p, 720)} alt={n === 0 ? l.title : ""} loading="lazy" className="h-full w-full shrink-0 object-cover" />
+            <img key={n} src={img(p, 720)} alt={n === 0 ? l.title : ""} loading="lazy" className="h-full w-full shrink-0 snap-center object-cover" />
           ))}
         </div>
         {l.rating && l.rating >= 4.7 && l.review_count >= 3 && (

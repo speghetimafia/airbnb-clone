@@ -10,9 +10,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 UPLOAD_DIR = DATA_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DATA_DIR / 'airbnb.db'}")
-
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(f"sqlite:///{DATA_DIR / 'airbnb.db'}", connect_args={"check_same_thread": False})
 
 
 @event.listens_for(engine, "connect")

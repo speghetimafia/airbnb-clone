@@ -24,9 +24,9 @@ export const countFilters = (f: Filters) =>
 const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
 /** Mount only while open (`{open && <FiltersModal/>}`) so it starts from the current filters. */
-type Props = { open: boolean; onClose: () => void; value: Filters; onApply: (f: Filters) => void; total?: number };
+type Props = { onClose: () => void; value: Filters; onApply: (f: Filters) => void };
 
-export default function FiltersModal({ open, onClose, value, onApply, total }: Props) {
+export default function FiltersModal({ onClose, value, onApply }: Props) {
   const [f, setF] = useState(value);
   const [amenities, setAmenities] = useState<Amenity[]>([]);
   const [showAllAmenities, setShowAllAmenities] = useState(false);
@@ -40,7 +40,7 @@ export default function FiltersModal({ open, onClose, value, onApply, total }: P
 
   return (
     <Modal
-      open={open}
+      open
       onClose={onClose}
       title="Filters"
       size="lg"
@@ -48,7 +48,7 @@ export default function FiltersModal({ open, onClose, value, onApply, total }: P
         <div className="flex items-center justify-between">
           <button onClick={() => setF(EMPTY_FILTERS)} className="font-semibold underline">Clear all</button>
           <button onClick={() => onApply(f)} className="rounded-lg bg-ink px-6 py-3.5 font-semibold text-white hover:bg-black">
-            Show {total !== undefined ? `${total} ` : ""}places
+            Show places
           </button>
         </div>
       }

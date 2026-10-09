@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, Fragment, useCallback, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api, del, post, session } from "./api";
 import type { UserDetail } from "./types";
@@ -90,7 +90,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     <UserContext.Provider
       value={{ user, ready, login, logout, refresh: load, requireLogin, loginOpen, setLoginOpen, saved, toggleSaved }}
     >
-      {children}
+      {/* Remount pages on user switch so every fetch reruns as the new user. */}
+      <Fragment key={user?.id ?? "guest"}>{children}</Fragment>
     </UserContext.Provider>
   );
 }

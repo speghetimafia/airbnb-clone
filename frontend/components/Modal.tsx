@@ -35,11 +35,12 @@ export default function Modal({ open, onClose, title, children, footer, size = "
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl md:rounded-2xl ${width} ${
-          size === "full" ? "max-h-none rounded-none md:rounded-none" : ""
-        } animate-[slideUp_.25s_ease-out]`}
+        className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl md:rounded-2xl ${width} ${
+          size === "full" ? "!max-h-none !h-full !rounded-none" : ""
+        } animate-[slideUpMobile_.25s_ease-out] md:animate-[slideUpDesktop_.2s_ease-out]`}
       >
-        <div className="relative flex h-16 shrink-0 items-center justify-center border-b border-line px-6">
+        {size !== "full" && <div className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-[#dddddd] md:hidden" />}
+        <div className="relative flex h-14 shrink-0 items-center justify-center border-b border-line px-6">
           <button onClick={onClose} aria-label="Close" className="absolute left-4 rounded-full p-2 hover:bg-soft">
             <X size={16} strokeWidth={2.5} />
           </button>
@@ -48,7 +49,10 @@ export default function Modal({ open, onClose, title, children, footer, size = "
         <div className="flex-1 overflow-y-auto p-6">{children}</div>
         {footer && <div className="shrink-0 border-t border-line px-6 py-4">{footer}</div>}
       </div>
-      <style>{`@keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}`}</style>
+      <style>{`
+        @keyframes slideUpMobile { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes slideUpDesktop { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      `}</style>
     </div>
   );
 }

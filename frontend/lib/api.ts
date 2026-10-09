@@ -19,12 +19,6 @@ export const session = {
   },
 };
 
-export class ApiError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
-  }
-}
-
 /** FastAPI errors are either {detail: "msg"} or {detail: [{msg, loc}]} for validation. */
 function errorMessage(body: unknown, fallback: string): string {
   const detail = (body as { detail?: unknown })?.detail;
@@ -46,7 +40,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_URL}/api${path}`, { ...init, headers });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new ApiError(res.status, errorMessage(body, `Something went wrong (${res.status})`));
+    throw new Error(errorMessage(body, `Something went wrong (${res.status})`));
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
 }

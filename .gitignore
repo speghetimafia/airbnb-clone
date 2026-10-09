@@ -9,3 +9,4 @@ uploads/
 !.env.example
 .DS_Store
 .pytest_cache/
+docs/gemini-frontend-prompt.md
