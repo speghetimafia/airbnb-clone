@@ -177,6 +177,7 @@ Both services auto-deploy from GitHub on every push to `main`.
 - Prices are whole rupees. The service fee is a flat 14% of (nights − discount + cleaning). Taxes and GST are not modelled.
 - Weekend nights are Friday and Saturday. Only one discount applies: the monthly discount for 28+ nights if the host set one, otherwise the weekly discount for 7+ nights.
 - Search location is a case-insensitive match on city, state or title. There is no geocoding.
+- The Airbnb Cereal font (© Airbnb, all rights reserved) is self-hosted for visual fidelity in this non-commercial demo.
 - Uploaded images go on the backend's volume rather than cloud storage. Seed photos come from Unsplash and avatars from pravatar.cc.
 - Seed dates are relative to the day the database was seeded, so the demo always has upcoming and past trips.
 - Editing a template only affects future bookings, because messages are filled in when the booking is made.
