@@ -233,16 +233,20 @@ def seed(db):
     return len(listings)
 
 
+def seed_if_empty():
+    """Used on deploy: seed a fresh DB, never touch one that already has data."""
+    Base.metadata.create_all(engine)
+    with SessionLocal() as db:
+        if db.scalar(select(User.id).limit(1)):
+            return
+        print(f"Seeded {seed(db)} listings")
+
+
 def main():
     if "--if-empty" in sys.argv:
-        Base.metadata.create_all(engine)
-        with SessionLocal() as db:
-            if db.scalar(select(User.id).limit(1)):
-                print("DB already seeded")
-                return
-    else:
-        Base.metadata.drop_all(engine)
-        Base.metadata.create_all(engine)
+        return seed_if_empty()
+    Base.metadata.drop_all(engine)
+    Base.metadata.create_all(engine)
     with SessionLocal() as db:
         print(f"Seeded {seed(db)} listings")
 

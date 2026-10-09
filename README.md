@@ -2,8 +2,9 @@
 
 A full-stack Airbnb clone for the Indian market (₹ INR). Guests can search homes, view listing details, book stays with live availability, and manage their trips. Hosts can create and manage listings, control their calendar, set pricing rules and schedule automated messages to guests.
 
-- **Live demo:** _add Vercel URL_
-- **API docs (Swagger):** _add Railway URL_/docs
+- **Live demo:** https://airbnb-clone-beta-inky-92.vercel.app
+- **API docs (Swagger):** https://backend-production-2fe98.up.railway.app/docs
+- **Source:** https://github.com/speghetimafia/airbnb-clone
 
 ## Tech stack
 
@@ -161,7 +162,7 @@ All routes are under `/api`. Interactive docs are at `/docs`. Requests that need
 ## Deployment
 
 **Backend on Railway**
-1. Create a new project from the GitHub repo and set the service's root directory to `backend`. `railway.json` sets the start command, which seeds an empty database and then runs uvicorn.
+1. Create a project with a service whose root is `backend/` (via the dashboard, or `railway up ./backend --path-as-root`). `railpack.json` sets the start command, `python -m app.main`, which seeds an empty database and then serves on `$PORT`.
 2. Add a volume mounted at `/data`, and set the variables `DATA_DIR=/data` and `CORS_ORIGINS=https://<your-vercel-app>.vercel.app`.
 3. Generate a public domain.
 

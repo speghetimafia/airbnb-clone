@@ -27,3 +27,13 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 @app.get("/health")
 def health():
     return {"ok": True}
+
+
+if __name__ == "__main__":
+    # Production entrypoint (`python -m app.main`): seed an empty DB, then serve on $PORT.
+    import uvicorn
+
+    from .seed import seed_if_empty
+
+    seed_if_empty()
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
