@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Pencil, Plus, Star, Trash2 } from "lucide-react";
+import { Plus, Star } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -17,9 +17,8 @@ type ResTab = "upcoming" | "current" | "past" | "cancelled";
 
 export default function Hosting() {
   const { user, ready, refresh } = useUser();
-  const key = user ? `?u=${user.id}` : ""; // refetch when switching users
-  const listings = useApi<ListingCard[]>(user ? `/host/listings${key}` : null);
-  const bookings = useApi<Booking[]>(user ? `/host/bookings${key}` : null);
+  const listings = useApi<ListingCard[]>(user ? "/host/listings" : null);
+  const bookings = useApi<Booking[]>(user ? "/host/bookings" : null);
   const [tab, setTab] = useState<"reservations" | "listings">("reservations");
   const [resTab, setResTab] = useState<ResTab>("upcoming");
   const [toDelete, setToDelete] = useState<ListingCard | null>(null);
@@ -111,80 +110,58 @@ export default function Hosting() {
               {groups[resTab].length === 0 ? (
                 <p className="rounded-2xl bg-soft p-10 text-center text-muted">No reservations here.</p>
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-line">
-                  <table className="w-full min-w-[720px] text-left text-sm">
-                    <thead className="border-b border-line text-muted">
-                      <tr>
-                        <th className="p-4 font-semibold">Guest</th>
-                        <th className="p-4 font-semibold">Listing</th>
-                        <th className="p-4 font-semibold">Dates</th>
-                        <th className="p-4 font-semibold">Guests</th>
-                        <th className="p-4 font-semibold">Payout</th>
-                        <th className="p-4" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {groups[resTab].map((b) => (
-                        <tr key={b.id} className="border-b border-line last:border-0">
-                          <td className="p-4">
-                            <span className="flex items-center gap-3"><Avatar src={b.guest.avatar_url} name={b.guest.name} size={32} /> {b.guest.name}</span>
-                          </td>
-                          <td className="max-w-[240px] truncate p-4">
-                            <Link href={`/rooms/${b.listing.id}`} className="hover:underline">{b.listing.title}</Link>
-                          </td>
-                          <td className="p-4">{dateRange(b.check_in, b.check_out)}</td>
-                          <td className="p-4">{b.guests}</td>
-                          <td className="p-4 font-semibold">{money(b.total - b.service_fee)}</td>
-                          <td className="p-4 text-right">
-                            {resTab === "upcoming" && (
-                              <button onClick={() => setToCancel(b)} className="font-semibold underline">Cancel</button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {groups[resTab].map((b) => (
+                    <div key={b.id} className="space-y-3 rounded-xl border border-line p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-2.5 text-sm font-semibold">
+                          <Avatar src={b.guest.avatar_url} name={b.guest.name} size={32} />
+                          {b.guest.name}
+                        </span>
+                        <span className="text-sm font-semibold">{money(b.total - b.service_fee)}</span>
+                      </div>
+                      <Link href={`/rooms/${b.listing.id}`} className="block truncate text-sm text-muted hover:underline">
+                        {b.listing.title}
+                      </Link>
+                      <div className="flex items-center justify-between text-xs text-muted">
+                        <span>{dateRange(b.check_in, b.check_out)}</span>
+                        <span>{plural(b.guests, "guest")}</span>
+                      </div>
+                      {resTab === "upcoming" && (
+                        <div className="border-t border-line pt-2 text-right">
+                          <button onClick={() => setToCancel(b)} className="text-sm font-semibold text-[#c13515] underline">
+                            Cancel reservation
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-line">
-              <table className="w-full min-w-[720px] text-left text-sm">
-                <thead className="border-b border-line text-muted">
-                  <tr>
-                    <th className="p-4 font-semibold">Listing</th>
-                    <th className="p-4 font-semibold">Location</th>
-                    <th className="p-4 font-semibold">Price</th>
-                    <th className="p-4 font-semibold">Rating</th>
-                    <th className="p-4" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {(listings.data ?? []).map((l) => (
-                    <tr key={l.id} className="border-b border-line last:border-0">
-                      <td className="p-4">
-                        <Link href={`/rooms/${l.id}`} className="flex items-center gap-4 hover:underline">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={img(l.photos[0], 200)} alt="" className="h-12 w-16 rounded-md object-cover" />
-                          <span className="max-w-[260px] truncate font-semibold">{l.title}</span>
-                        </Link>
-                      </td>
-                      <td className="p-4">{l.city}, {l.state}</td>
-                      <td className="p-4">{money(l.base_price)}</td>
-                      <td className="p-4">
-                        {l.rating ? <span className="flex items-center gap-1"><Star size={12} className="fill-ink" /> {l.rating.toFixed(2)} ({l.review_count})</span> : "New"}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex justify-end gap-1">
-                          <Link href={`/hosting/listings/${l.id}`} title="Calendar & messages" className="rounded-full p-2 hover:bg-soft"><CalendarDays size={18} /></Link>
-                          <Link href={`/hosting/listings/${l.id}/edit`} title="Edit" className="rounded-full p-2 hover:bg-soft"><Pencil size={18} /></Link>
-                          <button onClick={() => setToDelete(l)} title="Delete" className="rounded-full p-2 hover:bg-soft"><Trash2 size={18} /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {(listings.data ?? []).map((l) => (
+                <div key={l.id} className="flex gap-4 rounded-xl border border-line p-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={img(l.photos[0], 200)} alt="" className="h-20 w-20 shrink-0 rounded-lg object-cover" />
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/rooms/${l.id}`} className="block truncate text-sm font-semibold hover:underline">
+                      {l.title}
+                    </Link>
+                    <div className="mt-0.5 text-xs text-muted">{l.city}, {l.state}</div>
+                    <div className="mt-1 flex items-center gap-2 text-xs">
+                      <span><b>{money(l.base_price)}</b> night</span>
+                      {l.rating && <span className="flex items-center gap-0.5"><Star size={10} className="fill-ink" /> {l.rating.toFixed(2)}</span>}
+                    </div>
+                    <div className="mt-3 flex items-center gap-3 text-xs font-semibold">
+                      <Link href={`/hosting/listings/${l.id}`} className="underline">Calendar & messages</Link>
+                      <Link href={`/hosting/listings/${l.id}/edit`} className="underline">Edit</Link>
+                      <button onClick={() => setToDelete(l)} className="text-[#c13515] underline">Delete</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </>

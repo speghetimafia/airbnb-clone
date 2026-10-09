@@ -23,12 +23,11 @@ def rating_stats():
 
 def card_query():
     stats = rating_stats()
-    q = (
+    return (
         select(Listing, stats.c.rating, stats.c.review_count)
         .outerjoin(stats, stats.c.listing_id == Listing.id)
         .options(selectinload(Listing.photos), joinedload(Listing.host))
     )
-    return q, stats
 
 
 def to_card(listing: Listing, rating, review_count) -> ListingCard:
@@ -65,7 +64,7 @@ def search(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=48),
 ):
-    q, stats = card_query()
+    q = card_query()
     filters = [Listing.max_guests >= guests, Listing.bedrooms >= bedrooms, Listing.beds >= beds]
     if location:
         like = f"%{location.strip()}%"
@@ -102,7 +101,7 @@ def search(
 
 @router.get("/{listing_id}", response_model=ListingDetail)
 def detail(listing_id: int, db: DB):
-    q, stats = card_query()
+    q = card_query()
     row = db.execute(q.where(Listing.id == listing_id).options(selectinload(Listing.amenities))).first()
     if not row:
         raise HTTPException(404, "Listing not found")

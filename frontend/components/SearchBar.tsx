@@ -80,7 +80,7 @@ export default function SearchBar({ onDone, stacked = false }: { onDone?: () => 
     </div>
   );
   const datesBody = (
-    <div className="flex justify-center p-4">
+    <div className="flex flex-col items-center p-4">
       <RangeCalendar
         checkIn={checkIn}
         checkOut={checkOut}
@@ -88,9 +88,18 @@ export default function SearchBar({ onDone, stacked = false }: { onDone?: () => 
         onChange={(a, b) => {
           setCheckIn(a);
           setCheckOut(b);
-          if (b && !stacked) setPanel("who");
+          if (b) setPanel("who");
         }}
       />
+      {checkIn && (
+        <button
+          type="button"
+          onClick={() => { setCheckIn(null); setCheckOut(null); }}
+          className="mt-3 text-xs font-semibold underline text-muted hover:text-ink"
+        >
+          Clear dates
+        </button>
+      )}
     </div>
   );
   const whoBody = (
@@ -100,9 +109,18 @@ export default function SearchBar({ onDone, stacked = false }: { onDone?: () => 
     </div>
   );
 
+  const clearAll = () => {
+    setLocation("");
+    setCheckIn(null);
+    setCheckOut(null);
+    setAdults(0);
+    setChildren(0);
+    setPanel("where");
+  };
+
   if (stacked) {
     const card = (p: Panel, label: string, value: string, body: React.ReactNode) => (
-      <div className="rounded-2xl bg-white shadow-card">
+      <div className="overflow-hidden rounded-2xl bg-white shadow-card">
         {panel === p ? (
           <div className="p-4">
             <h3 className="px-2 pb-2 text-2xl font-bold">{label}</h3>
@@ -126,13 +144,27 @@ export default function SearchBar({ onDone, stacked = false }: { onDone?: () => 
       </div>
     );
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 pb-24">
         {card("where", "Where to?", location || "I'm flexible", whereBody)}
         {card("dates", "When's your trip?", checkIn && checkOut ? `${shortDate(checkIn)} – ${shortDate(checkOut)}` : "Add dates", datesBody)}
         {card("who", "Who's coming?", guests ? plural(guests, "guest") : "Add guests", whoBody)}
-        <button onClick={submit} className="btn-brand mt-2 flex items-center justify-center gap-2 py-3.5">
-          <Search size={18} strokeWidth={3} /> Search
-        </button>
+
+        <div className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-between border-t border-line bg-white px-6 py-4">
+          <button
+            type="button"
+            onClick={clearAll}
+            className="text-sm font-semibold underline text-ink hover:text-muted"
+          >
+            Clear all
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            className="btn-brand flex items-center gap-2 px-6 py-3 text-sm shadow-md"
+          >
+            <Search size={16} strokeWidth={2.5} /> Search
+          </button>
+        </div>
       </div>
     );
   }

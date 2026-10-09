@@ -193,7 +193,7 @@ def seed(db):
         end = start + timedelta(days=nights)
         b = Booking(listing=listing, guest=guest, check_in=start, check_out=end,
                     guests=min(guests, listing.max_guests), status=status,
-                    **{k: v for k, v in rules.quote(listing, start, end).items() if k not in ("avg_nightly", "discount_label")})
+                    **rules.price_snapshot(listing, start, end))
         b.messages = rules.render_messages(b, listing, guest.name, now)
         db.add(b)
         return b

@@ -158,7 +158,7 @@ export default function Header() {
 
   return (
     <>
-      <header className={`sticky top-0 z-[500] border-b border-line bg-white ${expanded ? "md:pb-5" : ""}`}>
+      <header className={`sticky top-0 z-[500] border-b border-line bg-white ${expanded ? "md:pb-5" : ""} ${narrow ? "hidden md:block" : ""}`}>
         {/* Desktop */}
         <div className={`mx-auto hidden h-20 items-center justify-between px-6 md:flex xl:px-20 ${narrow ? "max-w-[1280px]" : ""}`}>
           <div className="flex-1">
@@ -202,12 +202,38 @@ export default function Header() {
         )}
 
         {/* Mobile */}
-        <div className="flex items-center gap-3 px-4 py-3 md:hidden">
-          <button onClick={() => setMobileOpen(true)} className="flex flex-1 items-center justify-center gap-2 rounded-full border border-line py-3 shadow-pill">
-            <Search size={16} strokeWidth={3} />
-            <span className="text-sm font-semibold">{params.get("location") || "Start your search"}</span>
-          </button>
-        </div>
+        {narrow ? null : isHome ? (
+          <div className="flex items-center gap-2 px-4 py-3 md:hidden">
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="flex flex-1 items-center gap-3 rounded-full border border-line bg-white py-2 pl-4 pr-3 text-left shadow-pill"
+            >
+              <Search size={18} strokeWidth={2.5} className="shrink-0 text-ink" />
+              <div className="flex-1 overflow-hidden">
+                <div className="truncate text-sm font-semibold leading-tight text-ink">
+                  {params.get("location") || "Where to?"}
+                </div>
+                <div className="truncate text-[11px] text-muted">
+                  {ci && co ? `${shortDate(ci)} – ${shortDate(co)}` : "Anywhere"} · {g ? plural(g, "guest") : "Any week · Add guests"}
+                </div>
+              </div>
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between px-4 py-3 md:hidden">
+            <Logo />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMobileOpen(true)}
+                className="flex items-center gap-2 rounded-full border border-line px-3 py-1.5 text-xs font-semibold shadow-pill"
+              >
+                <Search size={14} strokeWidth={2.5} />
+                Search
+              </button>
+              <UserMenu />
+            </div>
+          </div>
+        )}
       </header>
       {open && <div className="fixed inset-0 z-[400] bg-black/25" onClick={() => setOpen(false)} />}
       <Modal open={mobileOpen} onClose={() => setMobileOpen(false)} size="full">
@@ -222,12 +248,21 @@ export default function Header() {
 export function MobileNav() {
   const pathname = usePathname();
   const { user, setLoginOpen } = useUser();
-  const tab = (href: string, label: string, icon: React.ReactNode) => (
-    <Link href={href} className={`flex flex-col items-center gap-1 text-[10px] ${pathname === href ? "text-rausch" : "text-muted"}`}>
-      {icon}
-      {label}
-    </Link>
-  );
+
+  // Hide mobile bottom nav on listing details and checkout (they have their own fixed action bars)
+  if (pathname.startsWith("/rooms") || pathname.startsWith("/book")) {
+    return null;
+  }
+
+  const tab = (href: string, label: string, icon: React.ReactNode) => {
+    const active = pathname === href || (href === "/hosting" && pathname.startsWith("/hosting"));
+    return (
+      <Link href={href} className={`flex flex-col items-center gap-1 text-[10px] ${active ? "font-semibold text-rausch" : "text-muted"}`}>
+        {icon}
+        {label}
+      </Link>
+    );
+  };
   return (
     <nav className="fixed inset-x-0 bottom-0 z-[500] flex justify-around border-t border-line bg-white py-2 md:hidden">
       {tab("/", "Explore", <Search size={22} />)}

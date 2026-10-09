@@ -117,9 +117,18 @@ function Checkout() {
               maxLength={6}
               onChange={(e) => setCard({ ...card, pin: e.target.value.replace(/\D/g, "") })}
             />
-            <p className="mt-3 flex items-center gap-2 text-sm text-muted">
-              <Lock size={14} /> Demo checkout: no real payment is made. Use test card 4242 4242 4242 4242, any future date, any CVV.
-            </p>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+              <span className="flex items-center gap-1.5 text-muted">
+                <Lock size={14} /> Use test card <b>4242 4242 4242 4242</b>
+              </span>
+              <button
+                type="button"
+                onClick={() => setCard({ number: "4242 4242 4242 4242", expiry: "12/28", cvv: "123", pin: "400001" })}
+                className="rounded-md border border-line bg-soft px-3 py-1 text-xs font-semibold hover:border-ink"
+              >
+                Auto-fill test card
+              </button>
+            </div>
           </section>
 
           <section className="border-b border-line py-8">

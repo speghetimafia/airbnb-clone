@@ -36,7 +36,7 @@ def amenities(db: DB):
 
 @router.get("/wishlist", response_model=list[ListingCard])
 def wishlist(db: DB, user: CurrentUser):
-    q, _ = card_query()
+    q = card_query()
     q = q.join(WishlistItem, WishlistItem.listing_id == Listing.id).where(WishlistItem.user_id == user.id)
     return [to_card(*r) for r in db.execute(q.order_by(WishlistItem.created_at.desc()))]
 

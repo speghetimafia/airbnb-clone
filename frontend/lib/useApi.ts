@@ -25,10 +25,9 @@ export function useApi<T>(path: string | null) {
     };
   }, [path, key]);
 
-  const setData = useCallback((data: T) => setResult((r) => ({ ...r, data })), []);
   const reload = useCallback(() => setVersion((v) => v + 1), []);
 
   // Data from a previous path never leaks into a new one; a reload of the same path keeps it.
   const same = !!path && result.key.startsWith(`${path}#`);
-  return { data: same ? result.data : null, setData, error: same ? result.error : null, loading: !!path && result.key !== key, reload };
+  return { data: same ? result.data : null, error: same ? result.error : null, loading: !!path && result.key !== key, reload };
 }

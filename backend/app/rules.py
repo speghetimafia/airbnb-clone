@@ -46,6 +46,12 @@ def quote(listing: Listing, check_in: date, check_out: date) -> dict:
     }
 
 
+def price_snapshot(listing: Listing, check_in: date, check_out: date) -> dict:
+    """The quote fields a Booking stores, so later price edits never change past bookings."""
+    q = quote(listing, check_in, check_out)
+    return {k: q[k] for k in ("nights", "nightly_total", "discount", "cleaning_fee", "service_fee", "total")}
+
+
 def unavailable_exists(listing_id_col, start: date, end: date):
     """SQL EXISTS clause: true when the listing has a confirmed booking or host block overlapping [start, end)."""
     booked = exists().where(

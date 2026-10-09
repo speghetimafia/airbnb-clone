@@ -15,7 +15,10 @@ import { img, qs } from "@/lib/api";
 import { dateRange, money, nightsBetween, plural, time12, yearsSince } from "@/lib/format";
 import type { ListingDetail, Range, Review } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
+import { useSnapIndex } from "@/lib/useSnapIndex";
 import { useUser } from "@/lib/user";
+
+const share = () => navigator.clipboard?.writeText(location.href).then(() => toast("Link copied"));
 
 const PinMap = dynamic(() => import("@/components/MapView").then((m) => m.PinMap), {
   ssr: false,
@@ -24,15 +27,61 @@ const PinMap = dynamic(() => import("@/components/MapView").then((m) => m.PinMap
 
 function Gallery({ listing }: { listing: ListingDetail }) {
   const [open, setOpen] = useState(false);
+  const { ref, index: active, onScroll } = useSnapIndex();
+  const router = useRouter();
   const photos = listing.photos;
+
   return (
     <>
-      <div className="relative grid h-[300px] grid-cols-4 grid-rows-2 gap-2 overflow-hidden rounded-xl md:h-[420px]">
+      {/* Mobile edge-to-edge carousel */}
+      <div className="relative -mx-6 -mt-6 aspect-[4/3] overflow-hidden bg-soft md:hidden">
+        <div ref={ref} onScroll={onScroll} className="no-scrollbar flex h-full snap-x snap-mandatory overflow-x-auto">
+          {photos.map((p, idx) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={p.id}
+              src={img(p.url, 720)}
+              alt={idx === 0 ? listing.title : ""}
+              className="h-full w-full shrink-0 snap-center object-cover"
+              onClick={() => setOpen(true)}
+            />
+          ))}
+        </div>
+
+        {/* Floating action buttons */}
+        <button
+          onClick={() => router.back()}
+          aria-label="Back"
+          className="absolute left-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow transition hover:bg-white"
+        >
+          <ChevronLeft size={18} strokeWidth={2.5} />
+        </button>
+        <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+          <button
+            onClick={share}
+            aria-label="Share"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow transition hover:bg-white"
+          >
+            <Share size={15} />
+          </button>
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow">
+            <HeartButton id={listing.id} className="[&_svg]:h-4 [&_svg]:w-4" />
+          </div>
+        </div>
+
+        {/* Counter badge */}
+        <div className="absolute bottom-4 right-4 z-10 rounded-md bg-black/70 px-2.5 py-1 text-xs font-semibold text-white">
+          {active + 1} / {photos.length}
+        </div>
+      </div>
+
+      {/* Desktop 5-photo grid */}
+      <div className="relative hidden h-[420px] grid-cols-4 grid-rows-2 gap-2 overflow-hidden rounded-xl md:grid">
         {photos.slice(0, 5).map((p, i) => (
           <button
             key={p.id}
             onClick={() => setOpen(true)}
-            className={`overflow-hidden ${i === 0 ? "col-span-4 row-span-2 md:col-span-2" : "hidden md:block"}`}
+            className={`overflow-hidden ${i === 0 ? "col-span-2 row-span-2" : "col-span-1 row-span-1"}`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={img(p.url)} alt={i === 0 ? listing.title : ""} className="h-full w-full object-cover transition hover:brightness-90" />
@@ -40,16 +89,18 @@ function Gallery({ listing }: { listing: ListingDetail }) {
         ))}
         <button
           onClick={() => setOpen(true)}
-          className="absolute bottom-6 right-6 flex items-center gap-2 rounded-lg border border-ink bg-white px-4 py-1.5 text-sm font-semibold"
+          className="absolute bottom-6 right-6 flex items-center gap-2 rounded-lg border border-ink bg-white px-4 py-1.5 text-sm font-semibold shadow hover:bg-soft"
         >
           <Grip size={16} /> Show all photos
         </button>
       </div>
+
+      {/* Full screen photos modal */}
       <Modal open={open} onClose={() => setOpen(false)} size="full">
-        <div className="mx-auto max-w-3xl space-y-2">
+        <div className="mx-auto max-w-3xl space-y-3 pb-8">
           {photos.map((p) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={p.id} src={img(p.url)} alt="" className="w-full" loading="lazy" />
+            <img key={p.id} src={img(p.url)} alt="" className="w-full rounded-lg" loading="lazy" />
           ))}
         </div>
       </Modal>
@@ -140,7 +191,6 @@ function Room() {
     setCheckOut(b);
   };
   const reserve = () => {
-    if (isOwner) return toast.error("You can't book your own listing");
     if (!requireLogin()) return;
     router.push(`/book/${l.id}?${qs({ check_in: checkIn, check_out: checkOut, guests })}`);
   };
@@ -148,14 +198,12 @@ function Room() {
 
   return (
     <main className="mx-auto max-w-[1120px] px-6 pb-28 pt-6 md:pb-12 xl:px-0">
-      <button onClick={() => router.back()} className="mb-4 flex items-center gap-1 text-sm font-semibold md:hidden">
-        <ChevronLeft size={18} /> Back
-      </button>
-      <div className="mb-6 flex items-end justify-between gap-4">
+      {/* Desktop title row */}
+      <div className="mb-6 hidden items-end justify-between gap-4 md:flex">
         <h1 className="text-[26px] font-semibold leading-tight">{l.title}</h1>
-        <div className="hidden shrink-0 gap-2 text-sm font-semibold md:flex">
+        <div className="flex shrink-0 gap-2 text-sm font-semibold">
           <button
-            onClick={() => navigator.clipboard?.writeText(location.href).then(() => toast("Link copied"))}
+            onClick={share}
             className="flex items-center gap-2 rounded-lg px-3 py-2 underline hover:bg-soft"
           >
             <Share size={16} /> Share
@@ -167,6 +215,11 @@ function Room() {
       </div>
 
       <Gallery listing={l} />
+
+      {/* Mobile title */}
+      <div className="mt-5 md:hidden">
+        <h1 className="text-[22px] font-semibold leading-tight">{l.title}</h1>
+      </div>
 
       <div className="mt-8 grid gap-16 md:grid-cols-[1fr_370px] lg:gap-24">
         <div>
@@ -279,6 +332,7 @@ function Room() {
               checkIn={checkIn}
               checkOut={checkOut}
               guests={guests}
+              isHost={isOwner}
               onDates={setDates}
               onGuests={setGuests}
               onReserve={reserve}
@@ -359,9 +413,10 @@ function Room() {
         </div>
         <button
           onClick={() => (nights > 0 ? reserve() : document.getElementById("calendar")?.scrollIntoView({ behavior: "smooth" }))}
-          className="btn-brand px-8 py-3"
+          disabled={isOwner}
+          className="btn-brand px-8 py-3 disabled:opacity-50"
         >
-          {nights > 0 ? "Reserve" : "Check availability"}
+          {isOwner ? "Your listing" : nights > 0 ? "Reserve" : "Check availability"}
         </button>
       </div>
     </main>

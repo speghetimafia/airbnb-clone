@@ -12,6 +12,7 @@ import { del, post, put } from "@/lib/api";
 import { dateRange, fromISO, time12, toISO } from "@/lib/format";
 import type { Block, Booking, ListingDetail, Template, Trigger } from "@/lib/types";
 import { useApi } from "@/lib/useApi";
+import { useIsMobile } from "@/lib/useIsMobile";
 import { useUser } from "@/lib/user";
 
 const TRIGGERS: Record<Trigger, string> = {
@@ -28,6 +29,7 @@ function CalendarTab({ listingId, bookings }: { listingId: number; bookings: Boo
   const blocks = useApi<Block[]>(`/listings/${listingId}/blocks`);
   const [range, setRange] = useState<DateRange | undefined>();
   const [note, setNote] = useState("");
+  const isMobile = useIsMobile();
   const today = startOfDay(new Date());
 
   const add = async () => {
@@ -59,7 +61,7 @@ function CalendarTab({ listingId, bookings }: { listingId: number; bookings: Boo
           mode="range"
           selected={range}
           onSelect={setRange}
-          numberOfMonths={2}
+          numberOfMonths={isMobile ? 1 : 2}
           startMonth={today}
           disabled={[{ before: today }, ...booked, ...blocked]}
           modifiers={{ booked, blocked }}
@@ -225,7 +227,7 @@ export default function ManageListing() {
   const { id } = useParams<{ id: string }>();
   const { user } = useUser();
   const { data: listing, error } = useApi<ListingDetail>(`/listings/${id}`);
-  const { data: bookings } = useApi<Booking[]>(user ? `/host/bookings?u=${user.id}` : null);
+  const { data: bookings } = useApi<Booking[]>(user ? "/host/bookings" : null);
   const [tab, setTab] = useState<"calendar" | "messages">("calendar");
 
   if (error) return <p className="p-20 text-center">{error}</p>;

@@ -26,7 +26,6 @@ class User(Base):
     is_superhost: Mapped[bool] = mapped_column(Boolean, default=False)
     joined_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    listings: Mapped[list["Listing"]] = relationship(back_populates="host")
 
 
 class Amenity(Base):
@@ -73,12 +72,11 @@ class Listing(Base):
     check_out_time: Mapped[str] = mapped_column(String(5), default="11:00")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    host: Mapped[User] = relationship(back_populates="listings")
+    host: Mapped[User] = relationship()
     photos: Mapped[list["ListingPhoto"]] = relationship(
         order_by="ListingPhoto.position", cascade="all, delete-orphan", passive_deletes=True
     )
     amenities: Mapped[list[Amenity]] = relationship(secondary=listing_amenities, order_by=Amenity.name)
-    bookings: Mapped[list["Booking"]] = relationship(back_populates="listing", passive_deletes=True)
     blocks: Mapped[list["BlockedDate"]] = relationship(
         order_by="BlockedDate.start_date", cascade="all, delete-orphan", passive_deletes=True
     )
@@ -116,7 +114,7 @@ class Booking(Base):
     status: Mapped[str] = mapped_column(String(20), default="confirmed")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
-    listing: Mapped[Listing] = relationship(back_populates="bookings")
+    listing: Mapped[Listing] = relationship()
     guest: Mapped[User] = relationship()
     review: Mapped["Review | None"] = relationship(back_populates="booking", uselist=False)
     messages: Mapped[list["Message"]] = relationship(order_by="Message.send_at", cascade="all, delete-orphan")

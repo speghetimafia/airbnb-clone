@@ -9,7 +9,7 @@ import { useUser } from "@/lib/user";
 
 export default function Wishlists() {
   const { user, ready, saved } = useUser();
-  const { data, loading } = useApi<Card[]>(user ? `/wishlist?u=${user.id}` : null);
+  const { data, loading } = useApi<Card[]>(user ? "/wishlist" : null);
 
   if (!ready) return null;
   if (!user) return <LoginPrompt title="Wishlists" text="Tap the heart on any home to save it here." />;

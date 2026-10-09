@@ -191,7 +191,7 @@ function Trips() {
   const { user, ready } = useUser();
   const params = useSearchParams();
   const booked = Number(params.get("booked"));
-  const { data, loading, reload } = useApi<Booking[]>(user ? `/bookings/me?u=${user.id}` /* refetch when switching users */ : null);
+  const { data, loading, reload } = useApi<Booking[]>(user ? "/bookings/me" : null);
   const [tab, setTab] = useState<"upcoming" | "past" | "cancelled">("upcoming");
   const today = toISO(new Date());
 

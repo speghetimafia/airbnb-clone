@@ -49,11 +49,9 @@ def create(data: BookingIn, db: DB, user: CurrentUser):
     with _booking_lock:
         if not rules.is_available(db, listing.id, data.check_in, data.check_out):
             raise HTTPException(409, "Those dates were just booked. Pick different dates.")
-        price = rules.quote(listing, data.check_in, data.check_out)
-        price.pop("avg_nightly"), price.pop("discount_label")
         booking = Booking(
             listing_id=listing.id, guest_id=user.id, check_in=data.check_in, check_out=data.check_out,
-            guests=data.guests, status="confirmed", **price,
+            guests=data.guests, status="confirmed", **rules.price_snapshot(listing, data.check_in, data.check_out),
         )
         booking.messages = rules.render_messages(booking, listing, user.name, datetime.now())
         db.add(booking)

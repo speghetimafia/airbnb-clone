@@ -14,7 +14,7 @@ router = APIRouter(tags=["host"])
 
 @router.get("/host/listings", response_model=list[ListingCard])
 def my_listings(db: DB, user: CurrentUser):
-    q, _ = card_query()
+    q = card_query()
     return [to_card(*r) for r in db.execute(q.where(Listing.host_id == user.id).order_by(Listing.id.desc()))]
 
 
