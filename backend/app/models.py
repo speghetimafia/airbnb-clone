@@ -70,6 +70,10 @@ class Listing(Base):
     max_nights: Mapped[int] = mapped_column(Integer, default=30)
     check_in_time: Mapped[str] = mapped_column(String(5), default="14:00")
     check_out_time: Mapped[str] = mapped_column(String(5), default="11:00")
+    advance_notice_days: Mapped[int] = mapped_column(Integer, default=0, server_default="0")  # 0 = same day
+    availability_window_days: Mapped[int] = mapped_column(Integer, default=365, server_default="365")
+    # Unlisted homes stay editable but disappear from search and can't be booked.
+    is_listed: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     host: Mapped[User] = relationship()

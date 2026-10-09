@@ -4,10 +4,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from .db import UPLOAD_DIR, Base, engine
+from .db import UPLOAD_DIR, sync_schema
 from .routers import bookings, host, listings, users
 
-Base.metadata.create_all(engine)
+sync_schema()
 
 app = FastAPI(title="Airbnb Clone API", version="1.0.0")
 app.add_middleware(

@@ -9,7 +9,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import select
 
 from . import rules
-from .db import Base, SessionLocal, engine
+from .db import Base, SessionLocal, engine, sync_schema
 from .models import Amenity, BlockedDate, Booking, Listing, ListingPhoto, MessageTemplate, Review, User, WishlistItem
 
 U = "https://images.unsplash.com/photo-{}?auto=format&fit=crop&w=1200&q=80"
@@ -169,6 +169,7 @@ def seed(db):
             weekly_discount_pct=rng.choice([0, 5, 10, 15]), monthly_discount_pct=rng.choice([0, 20, 25, 30]),
             min_nights=rng.choice([1, 1, 1, 2, 2, 3]), max_nights=rng.choice([14, 30, 60]),
             check_in_time=rng.choice(["13:00", "14:00", "15:00"]), check_out_time=rng.choice(["10:00", "11:00"]),
+            advance_notice_days=rng.choice([0, 0, 0, 1, 2]), availability_window_days=rng.choice([180, 365, 365]),
             max_guests=bedrooms * 2 + rng.choice([0, 1, 2]), bedrooms=bedrooms, beds=bedrooms + rng.choice([0, 1]),
             baths=max(1, bedrooms - rng.choice([0, 1])),
             description=(
@@ -221,6 +222,8 @@ def seed(db):
     book(listings[22], arjun, today + timedelta(days=90), 2, status="cancelled")
     db.flush()
 
+    listings[5].is_listed = False  # one unlisted home so the host "Unlisted" section isn't empty
+
     # Host blocks (maintenance / personal use).
     for listing in rng.sample(listings, 10):
         start = today + timedelta(days=rng.randint(45, 80))
@@ -235,7 +238,7 @@ def seed(db):
 
 def seed_if_empty():
     """Used on deploy: seed a fresh DB, never touch one that already has data."""
-    Base.metadata.create_all(engine)
+    sync_schema()
     with SessionLocal() as db:
         if db.scalar(select(User.id).limit(1)):
             return

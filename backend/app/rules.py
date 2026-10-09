@@ -74,8 +74,14 @@ def is_available(db: Session, listing_id: int, start: date, end: date) -> bool:
 
 def stay_error(listing: Listing, check_in: date, check_out: date, guests: int, today: date) -> str | None:
     """Validation that doesn't need the DB. Returns a human message or None."""
+    if not listing.is_listed:
+        return "This place isn't taking reservations right now"
     if check_in < today:
         return "Check-in can't be in the past"
+    if (check_in - today).days < listing.advance_notice_days:
+        return f"This host needs at least {listing.advance_notice_days} day(s) notice before check-in"
+    if (check_out - today).days > listing.availability_window_days:
+        return "Those dates are further ahead than this host accepts bookings"
     if check_out <= check_in:
         return "Check-out must be after check-in"
     nights = (check_out - check_in).days

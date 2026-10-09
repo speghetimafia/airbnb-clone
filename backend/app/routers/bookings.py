@@ -1,5 +1,6 @@
 import threading
 from datetime import date, datetime
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
@@ -8,7 +9,7 @@ from sqlalchemy.orm import joinedload, selectinload
 from .. import rules
 from ..deps import DB, CurrentUser, get_listing
 from ..models import Booking, Listing, Message, Review
-from ..schemas import BookingIn, BookingOut, MessageOut, ReviewIn, ReviewOut
+from ..schemas import BookingIn, BookingOut, MessageOut, ReviewIn, ReviewOut, Thread
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
@@ -63,6 +64,30 @@ def create(data: BookingIn, db: DB, user: CurrentUser):
 def my_trips(db: DB, user: CurrentUser):
     rows = db.scalars(booking_query().where(Booking.guest_id == user.id).order_by(Booking.check_in.desc()))
     return [to_out(b) for b in rows.unique()]
+
+
+@router.get("/inbox", response_model=list[Thread])
+def inbox(db: DB, user: CurrentUser, role: Literal["guest", "host"] = "guest"):
+    """Conversations with at least one due message: trips I'm taking (guest) or hosting (host), newest first."""
+    q = booking_query().where(Booking.status == "confirmed")
+    q = q.where(Booking.guest_id == user.id) if role == "guest" else q.join(Booking.listing).where(Listing.host_id == user.id)
+    bookings = {b.id: b for b in db.scalars(q).unique()}
+    due = db.scalars(
+        select(Message).where(Message.booking_id.in_(bookings), Message.send_at <= datetime.now()).order_by(Message.send_at)
+    ).all()
+    threads: dict[int, Thread] = {}
+    for m in due:
+        t = threads.get(m.booking_id)
+        threads[m.booking_id] = Thread(booking=to_out(bookings[m.booking_id]), last=m, count=(t.count if t else 0) + 1)
+    return sorted(threads.values(), key=lambda t: t.last.send_at, reverse=True)
+
+
+@router.get("/{booking_id}", response_model=BookingOut)
+def get_one(booking_id: int, db: DB, user: CurrentUser):
+    b = get_booking(db, booking_id)
+    if user.id not in (b.guest_id, b.listing.host_id):
+        raise HTTPException(403, "Not your booking")
+    return to_out(b)
 
 
 @router.post("/{booking_id}/cancel", response_model=BookingOut)

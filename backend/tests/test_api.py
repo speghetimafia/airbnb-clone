@@ -142,13 +142,51 @@ def test_listing_crud_and_ownership():
 
 def test_search_filters_and_pagination():
     page = client.get("/api/listings?page_size=12").json()
-    assert page["total"] == 40 and page["pages"] == 4 and len(page["items"]) == 12
+    assert page["total"] == 39 and page["pages"] == 4  # one seeded listing is unlisted and len(page["items"]) == 12
     goa = client.get("/api/listings?location=goa").json()["items"]
     assert goa and all(i["state"] == "Goa" or "Goa" in i["title"] for i in goa)
     cheap = client.get("/api/listings?max_price=3000").json()["items"]
     assert all(i["base_price"] <= 3000 for i in cheap)
     pools = client.get("/api/listings?category=Amazing pools").json()["items"]
     assert pools and all(i["category"] == "Amazing pools" for i in pools)
+
+
+def test_unlisted_notice_and_window_rules():
+    lid = new_listing(min_nights=1, advance_notice_days=2, availability_window_days=90)["id"]
+    book = lambda a, b: client.post("/api/bookings", json={"listing_id": lid, "check_in": D(a), "check_out": D(b), "guests": 1}, headers=GUEST)  # noqa: E731
+    assert book(1, 2).status_code == 422  # less than 2 days' notice
+    assert book(89, 91).status_code == 422  # beyond the 90-day window
+    found = lambda: lid in [i["id"] for i in client.get(f"/api/listings?check_in={D(5)}&check_out={D(6)}&page_size=48").json()["items"]]  # noqa: E731
+    assert found()
+    listing = client.get(f"/api/listings/{lid}").json()
+    body = {**{k: listing[k] for k in ("title", "description", "property_type", "category", "city", "state", "lat", "lng",
+                                       "max_guests", "bedrooms", "beds", "baths", "base_price")},
+            "photo_urls": [p["url"] for p in listing["photos"]], "is_listed": False}
+    assert client.put(f"/api/listings/{lid}", json=body, headers=HOST).status_code == 200
+    assert not found()
+    assert book(5, 6).status_code == 422  # unlisted can't be booked
+
+
+def test_inbox_and_profile_stats():
+    me = client.get("/api/me", headers=GUEST).json()
+    assert me["trip_count"] >= 1 and me["review_count"] >= 0
+    threads = client.get("/api/bookings/inbox", headers=GUEST).json()
+    assert threads and all(t["booking"]["guest"]["id"] == 6 and t["count"] >= 1 for t in threads)
+    host_threads = client.get("/api/bookings/inbox?role=host", headers=HOST).json()
+    assert host_threads and all(t["booking"]["listing"]["host"]["id"] == 1 for t in host_threads)
+    b = threads[0]["booking"]["id"]
+    assert client.get(f"/api/bookings/{b}", headers=GUEST).json()["listing"]["address"]
+    assert client.get(f"/api/bookings/{b}", headers={"X-User-Id": "9"}).status_code == 403
+
+
+def test_sync_schema_adds_new_columns_to_old_db():
+    from sqlalchemy import inspect, text
+    from app.db import sync_schema
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE listings DROP COLUMN is_listed"))
+    sync_schema()
+    assert "is_listed" in {c["name"] for c in inspect(engine).get_columns("listings")}
+    assert client.get("/api/listings?page_size=1").json()["total"] > 0  # existing rows default to listed
 
 
 def test_wishlist_toggle():

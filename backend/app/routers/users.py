@@ -1,11 +1,12 @@
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, HTTPException, UploadFile
-from sqlalchemy import exists, select
+from sqlalchemy import exists, func, select
 
 from ..db import UPLOAD_DIR
 from ..deps import DB, CurrentUser, get_listing
-from ..models import Amenity, Listing, User, WishlistItem
+from ..models import Amenity, Booking, Listing, Review, User, WishlistItem
 from ..schemas import AmenityOut, ListingCard, UserDetail
 from .listings import card_query, to_card
 
@@ -26,7 +27,11 @@ def users(db: DB):
 
 @router.get("/me", response_model=UserDetail)
 def me(db: DB, user: CurrentUser):
-    return with_is_host(db, user)
+    out = with_is_host(db, user)
+    out.trip_count = db.scalar(select(func.count()).where(
+        Booking.guest_id == user.id, Booking.status == "confirmed", Booking.check_out <= date.today()))
+    out.review_count = db.scalar(select(func.count()).where(Review.author_id == user.id))
+    return out
 
 
 @router.get("/amenities", response_model=list[AmenityOut])
