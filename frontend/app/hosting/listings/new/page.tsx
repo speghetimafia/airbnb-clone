@@ -24,7 +24,7 @@ export default function NewListing() {
   return (
     <>
       <h1 className="mx-auto max-w-3xl px-6 pt-10 text-[32px] font-semibold">Create a listing</h1>
-      <ListingForm submitLabel="Publish listing" onSubmit={create} onBack={() => router.push("/hosting")} />
+      <ListingForm submitLabel="Publish listing" onSubmit={create} onBack={() => router.push("/hosting/listings")} />
     </>
   );
 }

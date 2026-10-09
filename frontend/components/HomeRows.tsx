@@ -26,8 +26,8 @@ function RowCard({ l, small }: { l: ListingCard; small?: boolean }) {
       <div className="relative aspect-square overflow-hidden rounded-[20px] bg-soft">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={img(l.photos[0], 500)} alt={l.title} loading="lazy" className="h-full w-full object-cover" />
-        {favourite && !small && <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold shadow">Guest favourite</span>}
-        <HeartButton id={l.id} className="absolute right-3 top-3" />
+        {favourite && !small && <span className="absolute left-2.5 top-2.5 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-semibold shadow sm:left-3 sm:top-3 sm:px-3 sm:text-xs">Guest favourite</span>}
+        <HeartButton id={l.id} className="absolute right-2.5 top-2.5 sm:right-3 sm:top-3" />
       </div>
       <div className="mt-2 text-[15px] leading-snug">
         <div className="truncate font-medium">{small ? l.city : `${l.property_type} in ${l.city}`}</div>
