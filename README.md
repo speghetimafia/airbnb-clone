@@ -161,14 +161,14 @@ All routes are under `/api`. Interactive docs are at `/docs`. Requests that need
 
 ## Deployment
 
-**Backend on Railway**
-1. Create a project with a service whose root is `backend/` (via the dashboard, or `railway up ./backend --path-as-root`). `railpack.json` sets the start command, `python -m app.main`, which seeds an empty database and then serves on `$PORT`.
-2. Add a volume mounted at `/data`, and set the variables `DATA_DIR=/data` and `CORS_ORIGINS=https://<your-vercel-app>.vercel.app`.
-3. Generate a public domain.
+Both services auto-deploy from GitHub on every push to `main`.
 
-**Frontend on Vercel**
-1. Import the repo and set the root directory to `frontend`.
-2. Set `NEXT_PUBLIC_API_URL=https://<railway-domain>`.
+**Backend on Railway**: service root `/backend`, watch paths `/backend/**` (frontend-only commits don't restart the API).
+- `railpack.json` sets the start command, `python -m app.main`, which seeds an empty database and then serves on `$PORT`.
+- A volume is mounted at `/data`. Variables: `DATA_DIR=/data`, `CORS_ORIGINS=<the Vercel URL>`.
+
+**Frontend on Vercel**: root directory `frontend`, production branch `main`.
+- Variable: `NEXT_PUBLIC_API_URL=<the Railway URL>`.
 
 ## Assumptions and simplifications
 
