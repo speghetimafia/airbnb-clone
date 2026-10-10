@@ -19,36 +19,26 @@ A full-stack Airbnb clone for the Indian market (₹ INR). Guests can search hom
 
 ## Features
 
-**Guests**
-- Explore grid with a photo carousel on each card, ratings, a "Guest favourite" badge and wishlist hearts
-- Where / When / Who search bar with destination suggestions, a two-month date-range picker and a guest counter
-- Category icon row, plus a filters modal (price range, rooms and beds, property type, amenities)
-- Infinite scroll, and a map view with price pins (hovering a card highlights its pin)
-- Listing page:
-  - 5-photo gallery and a full-screen photo modal
-  - Amenities, host card, reviews with a rating breakdown, map, house rules
-  - Availability calendar with booked nights greyed out
-- Sticky booking card with live price quote: nightly × nights, weekend pricing, weekly/monthly discounts, cleaning fee, service fee
-- Checkout page ("Confirm and pay") with a mocked card form, then a confirmation and a toast
-- Trips page (upcoming, past, cancelled):
-  - Cancel a trip, which frees the dates immediately
-  - Leave a review after checkout
-  - A per-trip inbox with the host's automated messages
-- Wishlists page
+The UI follows the Airbnb app on phones (bottom tab bar, bottom-sheet dialogs, swipeable photos) and airbnb.com on desktop. Guest and host modes each have their own navigation, with a "Switching to hosting" screen in between.
 
-**Hosts**
-- Dashboard with reservations (upcoming, currently hosting, past, cancelled), this month's payouts, and a listings table
-- Full listing create, edit and delete:
-  - Photos by upload or URL, with a cover photo
-  - Click-to-place map pin
-  - Amenities
-  - Pricing rules
-  - Availability rules
-- **Calendar control:** block nights for maintenance or personal use (shown hatched); reservations are shown in pink
-- **Pricing rules:** base price, weekend (Fri/Sat) price, cleaning fee, weekly (7+ nights) and monthly (28+ nights) discounts, min/max nights, check-in/out times
-- **Scheduled messages:** templates such as Wi-Fi password, directions and check-in instructions, using placeholders like `{guest_name}` and `{maps_link}`. Each one is sent on confirmation, the day before check-in, or on checkout day. A live preview shows the filled-in text.
+**Guests** (tabs: Explore, Wishlists, Trips, Messages, Profile)
+- Explore: "Recently viewed" and "Popular homes in …" rows; searching or filtering switches to the grid with infinite scroll and a map with price pins
+- Where / When / Who search, category icon row, and a filters modal (price, rooms and beds, property type, amenities)
+- Listing page: photo gallery, category highlight, amenities, reviews with a rating breakdown, map, host card, house rules, and a calendar with unavailable nights greyed out
+- Booking card with a live price quote (weekend pricing, discounts, cleaning and service fees), then "Confirm and pay" with a mocked card
+- Trips: upcoming cards and "Where you've been"; each trip page has a map, a check-in/checkout timeline, the host's messages, directions, the receipt, cancel, and leave a review
+- Messages inbox, Wishlists, and a Profile with trip and review counts
 
-**Placeholders ("Coming soon")**: guest–host chat replies, identity verification, Experiences and Services tabs, and real payments.
+**Hosts** (tabs: Today, Calendar, Listings, Messages, Menu)
+- Today: reservations checking in, staying or checking out, plus upcoming ones; host cancellation
+- Calendar: price calendar per home with reserved nights and host blocks; tap a first and last night to block or reopen them
+- Listings: grouped Listed / Unlisted / In progress; step-by-step "create a listing" flow (about your place → make it stand out → price and publish) with a resumable draft
+- Listing editor ("Your space" and "Arrival guide"): photos, title, type, rooms, location pin, amenities, pricing (weekend price, cleaning fee), discounts, availability rules, listed/unlisted status, delete
+- **Booking rules from real hosting:** min/max nights, advance notice, how far ahead guests can book, and check-in/checkout times
+- **Scheduled messages:** Wi-Fi details, directions and check-in steps with placeholders like `{guest_name}` and `{maps_link}`, sent on confirmation, the day before check-in, or on checkout day
+- Menu: this month's earnings and overall rating
+
+**Placeholders ("Coming soon")**: replying to messages, identity verification, Experiences and Services, and real payments.
 
 ## Running locally
 
@@ -81,15 +71,18 @@ cd backend && pytest -q
 ## Architecture
 
 ```
-frontend/ (Next.js, client-rendered pages)             backend/ (FastAPI)
-  app/            pages: /, /rooms/[id], /book/[id],     app/main.py      app, CORS, routers, /uploads static
-                  /trips, /wishlists, /hosting/...       app/routers/     listings · bookings · host · users
-  components/     Header+SearchBar, ListingCard,         app/rules.py     pricing, availability, validation,
-                  BookingCard, RangeCalendar, MapView,                    message rendering (pure, unit-tested)
-                  FiltersModal, ListingForm, Modal       app/models.py    SQLAlchemy schema
-  lib/api.ts      fetch wrapper (adds X-User-Id)         app/schemas.py   Pydantic request/response models
-  lib/user.tsx    session + wishlist context             app/deps.py      DB session, mocked auth, ownership checks
-  lib/useApi.ts   GET + loading/error hook               app/seed.py      demo data
+frontend/ (Next.js, client-rendered pages)                backend/ (FastAPI)
+  app/              guest: /, /rooms/[id], /book/[id],      app/main.py     app, CORS, routers, /uploads static
+                    /trips/[id], /messages, /profile        app/routers/    listings · bookings · host · users
+                    host: /hosting, /hosting/calendar,      app/rules.py    pricing, availability, validation,
+                    /hosting/listings/(new|[id]), menu                      message rendering (pure, unit-tested)
+  components/       Header (both navs), SearchBar,          app/models.py   SQLAlchemy schema
+                    ListingCard, BookingCard, MapView,      app/schemas.py  Pydantic request/response models
+                    ListingFields, Inbox, Modal (<dialog>)  app/deps.py     DB session, mocked auth, ownership
+  lib/api.ts        fetch wrapper (adds X-User-Id)          app/db.py       engine + additive schema migration
+  lib/user.tsx      session + wishlist context              app/seed.py     demo data
+  lib/useApi.ts     GET + loading/error hook
+  lib/storage.ts    recently viewed + listing draft (localStorage)
 ```
 
 **Key decisions**
@@ -100,6 +93,8 @@ frontend/ (Next.js, client-rendered pages)             backend/ (FastAPI)
 - **Messages need no background job.** On booking, each template is filled in and stored with a `send_at` time. The inbox only returns messages whose `send_at` has passed. A "day before check-in" message for a last-minute booking is sent right after the confirmation instead.
 - **Mocked auth:** the frontend stores the chosen user id and sends `X-User-Id`. All authorization (owner-only edits, guest-only reviews, guest-or-host cancellation) is enforced on the server in `deps.py` and the routers. A user counts as a host once they own a listing.
 - **Search state lives in the URL** (`/?location=Goa&check_in=…&category=…`), so searches can be shared and the back button works.
+- **Schema changes without losing data:** on startup `sync_schema()` creates missing tables and adds missing columns with their defaults, which is how the live database picked up listing status and booking rules. Renames or drops would need Alembic.
+- **Dialogs use the native `<dialog>` element**, so the browser traps focus, makes the page behind inert and handles Esc. Errors inside a dialog are shown in the dialog, because dialogs render above toasts.
 
 ## Database schema
 
@@ -123,7 +118,7 @@ erDiagram
 | Table | Columns (key ones) | Constraints |
 |---|---|---|
 | `users` | name, email, avatar_url, bio, is_superhost, joined_at | email unique |
-| `listings` | host_id, title, description, property_type, category, city, state, address, lat, lng, max_guests, bedrooms, beds, baths, base_price, weekend_price, cleaning_fee, weekly_discount_pct, monthly_discount_pct, min_nights, max_nights, check_in_time, check_out_time | price > 0, min ≤ max nights, discounts 0–90, index on city |
+| `listings` | host_id, title, description, property_type, category, city, state, address, lat, lng, max_guests, bedrooms, beds, baths, base_price, weekend_price, cleaning_fee, weekly_discount_pct, monthly_discount_pct, min_nights, max_nights, check_in_time, check_out_time, advance_notice_days, availability_window_days, is_listed | price > 0, min ≤ max nights, discounts 0–90, index on city |
 | `listing_photos` | listing_id, url, position | cascade delete |
 | `amenities`, `listing_amenities` | name, icon / (listing_id, amenity_id) | composite PK |
 | `bookings` | listing_id, guest_id, check_in, check_out, guests, nights, nightly_total, discount, cleaning_fee, service_fee, total, status | check_out > check_in, status ∈ {confirmed, cancelled}, index (listing_id, check_in, check_out) |
@@ -141,7 +136,7 @@ All routes are under `/api`. Interactive docs are at `/docs`. Requests that need
 
 | Method & path | Purpose |
 |---|---|
-| `GET /listings` | Search: `location, check_in, check_out, guests, category, property_type, min_price, max_price, bedrooms, beds, amenities, page, page_size` → `{items, total, page, pages}` |
+| `GET /listings` | Search (listed homes only): `location, check_in, check_out, guests, category, property_type, min_price, max_price, bedrooms, beds, amenities, page, page_size` → `{items, total, page, pages}` |
 | `GET /listings/{id}` | Detail with host, photos, amenities, rating |
 | `GET /listings/{id}/availability` | Booked + blocked ranges from today |
 | `GET /listings/{id}/quote?check_in&check_out&guests` | Validated price breakdown (422 rule violation, 409 unavailable) |
@@ -149,21 +144,23 @@ All routes are under `/api`. Interactive docs are at `/docs`. Requests that need
 | `POST /listings`, `PUT /listings/{id}`, `DELETE /listings/{id}` | Host CRUD (owner only; delete blocked while upcoming reservations exist) |
 | `GET/POST /listings/{id}/blocks`, `DELETE /blocks/{id}` | Host calendar blocks |
 | `GET/POST /listings/{id}/templates`, `PUT/DELETE /templates/{id}` | Scheduled message templates |
-| `POST /bookings` | Book (validates dates, min/max nights, guests, own-listing, overlap) |
+| `POST /bookings` | Book (validates dates, min/max nights, advance notice, booking window, guests, listed status, own listing, overlap) |
 | `GET /bookings/me` | My trips |
+| `GET /bookings/{id}` | One booking (its guest or host) |
+| `GET /bookings/inbox?role=guest\|host` | Message threads with the latest due message |
 | `POST /bookings/{id}/cancel` | Guest or host cancels before check-in |
 | `GET /bookings/{id}/messages` | Messages that are due |
 | `POST /bookings/{id}/review` | Review after checkout, once |
 | `GET /host/listings`, `GET /host/bookings` | Host dashboard data |
 | `GET /wishlist`, `GET /wishlist/ids`, `POST/DELETE /wishlist/{listing_id}` | Wishlist |
-| `GET /users`, `GET /me`, `GET /amenities` | Login switcher, session, amenity list |
+| `GET /users`, `GET /me`, `GET /amenities` | Login switcher, session with trip/review counts, amenity list |
 | `POST /uploads` | Image upload (JPEG/PNG/WebP, ≤ 5 MB) → `{url}` |
 
 ## Deployment
 
-Both services auto-deploy from GitHub on every push to `main`.
+The frontend auto-deploys from GitHub on every push to `main`. The backend is deployed with `railway up` (it auto-deploys too once Railway's GitHub app is connected to the repo).
 
-**Backend on Railway**: service root `/backend`, watch paths `/backend/**` (frontend-only commits don't restart the API).
+**Backend on Railway**: service root `/backend`, watch paths `/backend/**`.
 - `railpack.json` sets the start command, `python -m app.main`, which seeds an empty database and then serves on `$PORT`.
 - A volume is mounted at `/data`. Variables: `DATA_DIR=/data`, `CORS_ORIGINS=<the Vercel URL>`.
 
