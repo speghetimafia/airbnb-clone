@@ -66,7 +66,7 @@ npm run dev
 cd backend && pytest -q
 ```
 
-**Demo accounts:** log in through the menu and pick any user. *Ananya Sharma* and *Rohan Mehta* are Superhosts with listings. *Arjun Kapoor* is a guest with an upcoming trip tomorrow (so the "day before check-in" message is visible), a past stay waiting for a review, and a cancelled trip.
+**Demo accounts:** log in through the menu and pick any user. *Vaibhav Kawal* (the maker, hosting his real Gurugram flat *Shivghar.2001* among others) and *Rohan Mehta* are Superhosts with listings. *Arjun Kapoor* is a guest with an upcoming trip tomorrow (so the "day before check-in" message is visible), a past stay waiting for a review, and a cancelled trip.
 
 ## Architecture
 

@@ -142,7 +142,7 @@ def test_listing_crud_and_ownership():
 
 def test_search_filters_and_pagination():
     page = client.get("/api/listings?page_size=12").json()
-    assert page["total"] == 39 and page["pages"] == 4  # one seeded listing is unlisted and len(page["items"]) == 12
+    assert page["total"] == 40 and page["pages"] == 4  # 41 seeded, one unlisted and len(page["items"]) == 12
     goa = client.get("/api/listings?location=goa").json()["items"]
     assert goa and all(i["state"] == "Goa" or "Goa" in i["title"] for i in goa)
     cheap = client.get("/api/listings?max_price=3000").json()["items"]
