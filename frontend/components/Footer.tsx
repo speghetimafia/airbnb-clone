@@ -25,7 +25,7 @@ export default function Footer() {
         ))}
       </div>
       <div className="mx-auto flex max-w-[1760px] flex-col justify-between gap-2 border-t border-line px-6 py-6 text-sm md:flex-row xl:px-20">
-        <span>© {new Date().getFullYear()} Airbnb clone · Built for a hiring assignment · Privacy · Terms</span>
+        <span>© {new Date().getFullYear()} Airbnb clone · Built by Vaibhav Kawal for a hiring assignment · Privacy · Terms</span>
         <span className="flex items-center gap-4 font-semibold">
           <span className="flex items-center gap-2"><Globe size={16} /> English (IN)</span>
           <span>₹ INR</span>

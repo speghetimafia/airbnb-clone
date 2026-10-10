@@ -43,7 +43,7 @@ AMENITIES = [
 ]
 
 HOSTS = [
-    ("Ananya Sharma", True, "Goa-based architect. I restore old Portuguese homes and host them with love."),
+    ("Vaibhav Kawal", True, "I've hosted on Airbnb myself and built this clone. I love restoring old Goan homes and hosting them with care."),
     ("Rohan Mehta", True, "Ex-banker turned mountain host. Ask me for trek routes!"),
     ("Priya Nair", False, "Kerala girl, coffee planter's daughter. Homestays are my family business."),
     ("Vikram Singh", False, "Heritage havelis in Rajasthan, run by the family for four generations."),
@@ -93,6 +93,7 @@ LISTINGS = [
     ("Mahabaleshwar strawberry farmhouse", "Mahabaleshwar", "Maharashtra", "Farms", "Farm stay", 5800, 17.9237, 73.6586, 4),
     ("Riverside tent at Rishikesh", "Rishikesh", "Uttarakhand", "Camping", "Tent", 2200, 30.1300, 78.3200, 1),
     ("Snow-view igloo stay in Sethan", "Manali", "Himachal Pradesh", "Trending", "Dome", 7400, 32.2200, 77.2600, 1),
+    ("Shivghar.2001", "Gurugram", "Haryana", "Iconic cities", "Apartment", 1850, 28.4697, 77.0880, 0),
 ]
 
 TYPE_AMENITIES = {
@@ -145,6 +146,8 @@ def seed(db):
              joined_at=datetime(2016 + i, 3, 1))
         for i, (n, s, bio) in enumerate(HOSTS)
     ]
+    hosts[0].avatar_url = "/vaibhav.png"  # the maker's own photo, served from frontend/public
+    hosts[0].joined_at = datetime(2020, 3, 1)
     guests = [
         User(name=n, email=f"{n.split()[0].lower()}@guest.demo", avatar_url=avatar(i + 11), joined_at=datetime(2021, 1 + i, 5))
         for i, n in enumerate(GUESTS)
@@ -225,6 +228,17 @@ def seed(db):
     db.flush()
 
     listings[5].is_listed = False  # one unlisted home so the host "Unlisted" section isn't empty
+
+    # Vaibhav's real flat, as it appears in his Airbnb host app (city only, no street address).
+    shivghar = listings[-1]
+    shivghar.address = "Gurugram, Haryana"
+    shivghar.bedrooms, shivghar.beds, shivghar.baths, shivghar.max_guests = 1, 1, 1, 2
+    shivghar.weekend_price, shivghar.weekly_discount_pct, shivghar.monthly_discount_pct = None, 5, 15
+    shivghar.min_nights, shivghar.max_nights = 1, 1125
+    shivghar.description = (
+        "A cosy, freshly done-up one-bedroom flat in Gurugram with a comfy sofa corner, a full kitchen and fast Wi-Fi. "
+        "Close to the metro, Cyber Hub and plenty of cafés, so it works for both work trips and weekends."
+    )
 
     # Host blocks (maintenance / personal use).
     for listing in rng.sample(listings, 10):
