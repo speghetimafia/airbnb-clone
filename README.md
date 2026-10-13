@@ -70,6 +70,12 @@ cd backend && pytest -q
 
 ## Architecture
 
+![System architecture and deployment](docs/diagrams/architecture.svg)
+
+All 10 diagrams (architecture, ER, backend modules, booking sequence, validation, availability, pricing, booking lifecycle, scheduled messages, frontend) are in [`docs/diagrams/airbnb-clone.drawio`](docs/diagrams/airbnb-clone.drawio); open it in [app.diagrams.net](https://app.diagrams.net).
+
+**Code layout**
+
 ```
 frontend/ (Next.js, client-rendered pages)                backend/ (FastAPI)
   app/              guest: /, /rooms/[id], /book/[id],      app/main.py     app, CORS, routers, /uploads static
@@ -96,24 +102,19 @@ frontend/ (Next.js, client-rendered pages)                backend/ (FastAPI)
 - **Schema changes without losing data:** on startup `sync_schema()` creates missing tables and adds missing columns with their defaults, which is how the live database picked up listing status and booking rules. Renames or drops would need Alembic.
 - **Dialogs use the native `<dialog>` element**, so the browser traps focus, makes the page behind inert and handles Esc. Errors inside a dialog are shown in the dialog, because dialogs render above toasts.
 
+**Booking flow:** quote, checkout, then `POST /bookings` with the availability check and insert inside the lock.
+
+![Sequence diagram of quote, checkout and booking](docs/diagrams/booking-sequence.svg)
+
+**Availability rule:** half-open ranges, so a checkout day is the next guest's check-in day.
+
+![Half-open date ranges: back-to-back allowed, overlap rejected](docs/diagrams/availability.svg)
+
 ## Database schema
 
-```mermaid
-erDiagram
-    users ||--o{ listings : hosts
-    users ||--o{ bookings : books
-    users ||--o{ reviews : writes
-    users ||--o{ wishlist_items : saves
-    listings ||--o{ listing_photos : has
-    listings }o--o{ amenities : "listing_amenities"
-    listings ||--o{ bookings : receives
-    listings ||--o{ blocked_dates : "host blocks"
-    listings ||--o{ message_templates : "host writes"
-    listings ||--o{ wishlist_items : "saved in"
-    bookings ||--o| reviews : "reviewed by (1:1)"
-    bookings ||--o{ messages : "gets"
-    message_templates ||--o{ messages : "rendered into"
-```
+11 tables: 10 SQLAlchemy models plus the `listing_amenities` join table.
+
+![Entity-relationship diagram](docs/diagrams/er-diagram.svg)
 
 | Table | Columns (key ones) | Constraints |
 |---|---|---|
